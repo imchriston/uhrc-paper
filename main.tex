@@ -58,24 +58,24 @@ The autonomous control of complex nonlinear systems remains one of the most
 consequential open problems in control engineering
 \parencite{iqbal_nonlinear_2017, liu_new_2015, daoutidis_future_2023}.
 Systems such as unmanned aerial vehicles (UAVs), autonomous ground vehicles,
-and high-degree-of-freedom robotic manipulators are characterised by
-high-dimensional state spaces, nonlinear inter-state couplings, actuator
+and high degree-of-freedom robotic manipulators are characterised by
+high dimensional state spaces, nonlinear inter-state couplings, actuator
 saturation, and significant parametric uncertainty
 \parencite{sadati_two-level_2015, ameli_robust_2021, iqbal_nonlinear_2017,
 slotine_applied_1991}.
-The fundamental difficulty is that the dynamical regimes governing long-horizon
+The fundamental difficulty is that the dynamical regimes governing long horizon
 navigation and those governing fast stabilisation operate on incommensurable
 timescales, differ in their sensitivity to model error, and impose competing
 demands on the same actuator plant
 \parencite{liang_nonlinear_2018, abdelmaksoud_control_2020}.
-Designing a controller that simultaneously addresses long-horizon planning and
+Designing a controller that simultaneously addresses long horizon planning and
 fast reactive stabilisation across these coupled dynamics is fundamentally a
-multi-scale reasoning problem, and no single architecture has proven universally
+multiscale reasoning problem, and no single architecture has proven universally
 adequate across the competing demands of stability, adaptability, and
 computational tractability \parencite{rojas_complex_2025, goodwin_control_2001}.
  
 Classical hierarchical control has long addressed this multi-scale challenge
-through explicit structural decomposition: a high-level supervisory layer
+through explicit structural decomposition, a high-level supervisory layer
 generates strategic plans and setpoints while a low-level regulatory layer
 executes fast stabilisation and trajectory tracking
 \parencite{singh_systems_1978, sadati_two-level_2015, scattolini_hierarchical_2007,
@@ -83,21 +83,21 @@ mesarovic_two_1970, wilson_foundations_1979}.
 The theoretical underpinnings of this separation trace to the multilevel systems
 framework of \parencite{mesarovic_two_1970} and the hierarchical decomposition
 methods formalised in \parencite{singh_systems_1978, siljak_decentralized_2013},
-which established that large-scale optimisation problems can be rendered
+which established that large scale optimisation problems can be rendered
 tractable by decomposing them into coordinated subproblems across levels.
 This architecture has achieved sustained success across aerospace, process
-control, and robotics, benefiting from well-established stability theory,
+control, and robotics, benefiting from well established stability theory,
 modular implementation, and interpretable failure modes
 \parencite{sanders_hierarchical_1998, wang_hierarchical_2024, liu_generalized_2016,
 bahnasawi_decentralised_1990, roberts_optimal_2001}.
-The quadrotor UAV exemplifies this paradigm directly: the natural timescale
+The quadrotor UAV exemplifies this paradigm directly, the natural timescale
 separation between slow translational dynamics and fast rotational dynamics
-motivates a cascaded structure in which outer-loop position planners generate
+motivates a cascaded structure in which outer loop position planners generate
 attitude references consumed by inner-loop attitude regulators
 \parencite{hoffmann_quadrotor_2007, liang_nonlinear_2018, bouabdallah_pid_2004,
 nagaty_control_2013, abdelhay_modeling_2019}.
 Model predictive control has provided a principled realisation of the
-supervisory layer in such architectures, enabling constraint-aware planning
+supervisory layer in such architectures, enabling constraint aware planning
 with formal stability guarantees at the coordination level
 \parencite{scattolini_hierarchical_2007, wang_hierarchical_2024,
 torrente_data-driven_2021}.
@@ -116,28 +116,28 @@ Conversely, the low-level regulator executes reference trajectories without
 access to the global context that motivated them, rendering local disturbance
 responses globally suboptimal
 \parencite{nguyen_identifying_2021, daoutidis_decomposition_2019}.
-Fixed rule-based supervisory frameworks also become brittle when the system
+Fixed rule based supervisory frameworks also become brittle when the system
 encounters scenarios not anticipated at design time
 \parencite{sadati_hierarchical_2008, dave_design_2023}.
 These limitations are not incidental but structural, they arise from the
 requirement that the planner and regulator communicate through a
-pre-specified, fixed-dimensional interface whose information content is
+prespecified, fixed dimensional interface whose information content is
 determined at design time rather than adapted online to task demands
 \parencite{kolchinsky_nonlinear_2019, zhang_multi-level_2015}.
  
-Learning-based approaches have emerged as a principled alternative.
+Learning based approaches have emerged as a principled alternative.
 End-to-end reinforcement learning (RL) enables joint optimisation of planning
 and regulation without manual interface specification
 \parencite{almahamid_reinforcement_2021, levine_end--end_2016, kiran_deep_2022,
 shakya_reinforcement_2023}.
 Behavioural cloning provides a supervised alternative that sidesteps the
-credit-assignment challenges of RL by learning directly from expert
+credit assignment challenges of RL by learning directly from expert
 demonstrations, and has seen substantial success in autonomous driving and
 manipulation \parencite{levine_end--end_2016, le_mero_survey_2022, ly_learning_2021,
 block_is_2024}.
-However, flat end-to-end policies are notoriously sample-inefficient,
-sensitive to reward shaping, and do not naturally maintain the multi-scale
-temporal structure that long-horizon UAV navigation demands: the policy
+However, flat end-to-end policies are notoriously sample inefficient,
+sensitive to reward shaping, and do not naturally maintain the multiscale
+temporal structure that long horizon UAV navigation demands, the policy
 allocates identical computational depth regardless of whether the task requires
 strategic deliberation or reactive stabilisation
 \parencite{almahamid_reinforcement_2021, agyei_deep_2025}.
@@ -146,7 +146,7 @@ have demonstrated impressive agility in simulation
 \parencite{trad_real-time_2024, saviolo_learning_2023}, but the sim-to-real gap,
 sample complexity, and absence of formal stability guarantees remain open
 challenges \parencite{dai_lyapunov-stable_2021, agyei_deep_2025}.
-Hybrid neuro-symbolic and fuzzy-integrated controllers partially address this
+Hybrid neurosymbolic and fuzzy integrated controllers partially address this
 brittleness by pairing learned components with structured decomposition
 \parencite{tang_fuzzy_2024, mahmoud_fractional-order_2024, tran_hybrid_2021,
 baheri_hierarchical_2025}, yet the supervisory-regulatory interface and its
@@ -156,19 +156,19 @@ learned from data \parencite{borri_design_2019, yu_survey_2023}.
  
 Recent advances in neural reasoning architectures offer a substantially
 different approach to this problem.
-Test-time scaling methods that iterate computations in latent space
+Test time scaling methods that iterate computations in latent space
 \parencite{geiping_scaling_2025, li_seek_2025} and recurrent architectures that
 adapt computational depth to task difficulty
 \parencite{geiping_scaling_2025, li_system_2025}
 suggest that the depth of processing required for a given decision can be made
 emergent rather than fixed.
 The Hierarchical Reasoning Model (HRM), introduced by
-\parencite{wang_hierarchical_2025}, is a two-tier recurrent architecture comprising
+\parencite{wang_hierarchical_2025}, is a two tier recurrent architecture comprising
 a high-level module responsible for slow, abstract planning and a low-level
 module handling rapid, detailed computation, coupled through a shared carry
 state that enables adaptive allocation of computational depth.
 Trained on as few as 1{,}000 examples without pre-training or chain-of-thought
-supervision, the HRM achieves near-perfect accuracy on complex Sudoku problems
+supervision, the HRM achieves near perfect accuracy on complex Sudoku problems
 and optimal pathfinding in large mazes tasks on which state-of-the-art large
 language model approaches fail entirely \parencite{wang_hierarchical_2025,
 huang_towards_2023, feng_efficient_2025}.
@@ -176,12 +176,12 @@ Crucially, the hierarchical role specialisation between modules emerges through
 training rather than being architecturally prescribed, mirroring the
 representational dimensionality hierarchy observed across cortical regions in
 the mammalian brain \parencite{badre_frontal_2018, huntenburg_large-scale_2018,
-murray_hierarchy_2014}, where higher-order areas operate over longer intrinsic
-timescales and higher-dimensional representations than primary sensory regions.
+murray_hierarchy_2014}, where higher order areas operate over longer intrinsic
+timescales and higher dimensional representations than primary sensory regions.
 Building on this, \parencite{jin_decoupled_2025} demonstrated that decoupling
 planning from execution in a hierarchical framework yields measurable gains in
-multi-step reasoning tasks, further motivating the application of this design
-principle to closed-loop control.
+multistep reasoning tasks, further motivating the application of this design
+principle to closed loop control.
 The hierarchical neuro-symbolic decision transformer of
 \parencite{baheri_hierarchical_2025} similarly demonstrates that coupling a symbolic
 planner with a learned low-level policy through a structured interface
@@ -191,13 +191,13 @@ planning-execution separation confers a genuine computational advantage beyond
 what either component achieves in isolation.
  
 Nevertheless, all demonstrated HRM applications to date have been confined to
-discrete, turn-based domains.
-Whether the same unified reasoning mechanism can function as a closed-loop
-controller for a continuous, real-time nonlinear dynamical systems where
+discrete, turn based domains.
+Whether the same unified reasoning mechanism can function as a closed loop
+controller for a continuous, real time nonlinear dynamical systems where
 control outputs must be physically continuous, observations arrive as dense
 sensory streams, and temporal context must persist across thousands of control
 cycles remains entirely unexplored in the literature.
-Extending HRMs to such settings requires non-trivial architectural adaptations, discrete
+Extending HRMs to such settings requires nontrivial architectural adaptations, discrete
 token outputs must be replaced by continuous commands, and the supervised
 training signal must be derived from a physically meaningful expert policy
 rather than symbolic ground truth labels.
@@ -212,7 +212,7 @@ This paper addresses that gap by proposing and evaluating the
 \textit{Unified Hierarchical Reasoning Controller} (UHRC) for the autonomous
 navigation of a six-degree-of-freedom quadrotor UAV, constituting the first
 systematic application of the HRM architecture to a continuous nonlinear
-closed-loop control system.
+closed loop control system.
 The UHRC adapts the HRM's two-level reasoning structure into a recurrent
 transformer controller trained via behavioural cloning
 \parencite{levine_end--end_2016, le_mero_survey_2022, block_is_2024}
@@ -229,22 +229,22 @@ across five structured test cases of increasing environmental complexity.
 The primary contributions of this work are as follows:
 \begin{enumerate}
     \item The first empirical demonstration of an HRM-based architecture operating as a
-          closed-loop controller for a continuous nonlinear dynamic system, establishing
+          closed loop controller for a continuous nonlinear dynamic system, establishing
           the functional feasibility of unified hierarchical reasoning in the control domain.
 
     \item A UHRC architecture incorporating dual-stream fusion of kinematic and LiDAR
           observations, a rolling carry buffer for persistent temporal context, Rotary
           Positional Encoding (RoPE) over the carry sequence, and a gated subgoal injection
-          mechanism coupling H-module velocity planning to L-module wrench computation.
+          mechanism coupling H-module planning to L-module computation.
 
     \item A behavioural cloning training pipeline employing a versatile episode distribution,
           A*-generated expert demonstrations with injected perturbations and a
-          structured loss combining weighted action imitation, velocity subgoal supervision,
-          and cosine alignment.
+          structured loss combining weighted action imitation, subgoal supervision,
+          and alignment.
 
     \item A rigorous comparative empirical evaluation quantifying the performance robustness
-          trade-off between unified learned hierarchy and classical explicit decomposition
-          across open-field transit, constrained corridor navigation, gap threading, dynamic
+          trade off between unified learned hierarchy and classical explicit decomposition
+          across open field transit, constrained corridor navigation, gap threading, dynamic
           obstacle avoidance, and parametric model uncertainty.
 \end{enumerate}
 
