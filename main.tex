@@ -10,6 +10,7 @@
 \usepackage{graphicx}          
 \usepackage{booktabs}         
 \usepackage{hyperref}        
+\usepackage{enumitem}
 %\usepackage{cite}             
 \usepackage{caption}          
 \usepackage{subcaption}        
@@ -33,7 +34,7 @@
 \author{
     Christon Nunes\textsuperscript{1} \and
     Cade Coker\textsuperscript{2} \and
-    Dr. Craig Ramlal\textsuperscript{3}
+    Craig Ramlal\textsuperscript{3}
 }
 
 \date{
@@ -247,6 +248,626 @@ The primary contributions of this work are as follows:
           across open field transit, constrained corridor navigation, gap threading, dynamic
           obstacle avoidance, and parametric model uncertainty.
 \end{enumerate}
+
+\section{Methodology}
+\label{sec:method}
+
+This section details the UHRC architecture, the classical hierarchical baseline against
+which it is evaluated, the expert data generation procedure, the behavioural cloning
+training pipeline, and the comparative evaluation protocol. All controllers share an
+identical 6-DOF quadrotor plant, described first.
+
+
+%
+\subsection{Quadrotor Dynamics Model}
+\label{sec:dynamics}
+
+The benchmark plant is a rigid-body quadrotor modelled in the East-North-Up (ENU)
+inertial frame $\mathcal{I}$ with body frame $\mathcal{B}$ fixed to the vehicle centre
+of mass. The state vector is
+\begin{equation}
+    \mathbf{x} = \bigl[\mathbf{r}_I^{\top},\;
+                        \mathbf{v}_I^{\top},\;
+                        \mathbf{q}_{BI}^{\top},\;
+                        \boldsymbol{\omega}_B^{\top},\;
+                        \boldsymbol{\Omega}^{\top} \bigr]^{\top}
+    \in \mathbb{R}^{17},
+    \label{eq:state}
+\end{equation}
+where $\mathbf{r}_I \in \mathbb{R}^3$ and $\mathbf{v}_I \in \mathbb{R}^3$ are the
+inertial position and velocity, $\mathbf{q}_{BI} \in \mathbb{R}^4$ is the unit quaternion
+representing the rotation from $\mathcal{I}$ to $\mathcal{B}$ satisfying $\|\mathbf{q}_{BI}\| = 1$, $\boldsymbol{\omega}_B
+\in \mathbb{R}^3$ is the angular velocity expressed in $\mathcal{B}$, and
+$\boldsymbol{\Omega} \in \mathbb{R}^4$ contains the four rotor speeds.
+
+The control input is the body-frame wrench
+\begin{equation}
+    \mathbf{u} = \bigl[T,\; \tau_x,\; \tau_y,\; \tau_z\bigr]^{\top}
+    \in \mathbb{R}^4,
+\end{equation}
+comprising the net collective thrust $T$ along the body $+z$ axis and roll, pitch, and
+yaw torques $\tau_x$, $\tau_y$, $\tau_z$ respectively. This formulation bypasses
+explicit rotor speed dynamics and assumes ideal wrench actuation, which is appropriate
+for the simulation study conducted here \parencite{hoffmann_quadrotor_2007}.
+
+The translational dynamics are governed by Newton's second law in the inertial frame:
+\begin{equation}
+    m\dot{\mathbf{v}}_I =
+        mg +
+        R_{IB}\begin{bmatrix}0 \\ 0 \\ T\end{bmatrix} +
+        C_d^{\text{lin}}\,\mathbf{v}_I,
+    \label{eq:trans}
+\end{equation}
+where $m$ is the vehicle mass, $g$ is gravitational acceleration,
+$R_{IB} = R_{BI}^{\top}$ is the rotation matrix from $\mathcal{B}$ to $\mathcal{I}$
+derived from $\mathbf{q}_{BI}$, and $C_d^{\text{lin}} = \mathrm{diag}(c_x, c_y, c_z)$
+is the linear aerodynamic drag matrix. The rotational dynamics follow the
+Newton-Euler equations in the body frame:
+\begin{equation}
+    J\dot{\boldsymbol{\omega}}_B =
+        \boldsymbol{\tau}_B -
+        \boldsymbol{\omega}_B \times J\boldsymbol{\omega}_B -
+        C_d^{\text{rot}}\,\boldsymbol{\omega}_B,
+    \label{eq:rot}
+\end{equation}
+where $J = \mathrm{diag}(I_{xx}, I_{yy}, I_{zz})$ is the diagonal inertia matrix,
+$\boldsymbol{\tau}_B = [\tau_x, \tau_y, \tau_z]^{\top}$, and
+$C_d^{\text{rot}} = \mathrm{diag}(d_x, d_y, d_z)$ is the rotational damping matrix.
+Attitude kinematics are propagated via the unit quaternion differential equation
+\begin{equation}
+    \dot{\mathbf{q}}_{BI} =
+        \tfrac{1}{2}\,(\mathbf{q}_{BI})\,\boldsymbol{\omega}_B,
+\end{equation}
+where $(\mathbf{q}) \in \mathbb{R}^{4\times3}$ is the standard quaternion kinematic
+matrix \parencite{shastry_development_2018}. The system is integrated using a
+fourth-order Runge-Kutta scheme at a fixed timestep of $\Delta t = 0.01$\,s, with
+quaternion renormalisation applied after each step. Physical parameters are listed in
+Table~\ref{tab:quad_params}.
+
+\begin{table}[ht]
+\centering
+\caption{Quadrotor physical parameters.}
+\label{tab:quad_params}
+\begin{tabular}{llll}
+\hline
+Parameter & Symbol & Value & Units \\
+\hline
+Mass             & $m$       & 1.0  & kg \\
+Inertia (roll)   & $I_{xx}$  & 0.008 & kg\,m$^2$ \\
+Inertia (pitch)  & $I_{yy}$  & 0.008 & kg\,m$^2$ \\
+Inertia (yaw)    & $I_{zz}$  & 0.014 & kg\,m$^2$ \\
+Arm length       & $l$       & 0.17  & m \\
+Thrust coefficient & $k_T$   & $1.9\times10^{-6}$ & N/(rad/s)$^2$ \\
+Torque coefficient & $k_M$   & $2.6\times10^{-8}$ & N$\cdot$m/(rad/s)$^2$ \\
+Max rotor speed  & $\Omega_{\max}$ & 18{,}000 & rpm \\
+Linear drag      & $\mathrm{diag}(C_d^{\text{lin}})$ & [0.10, 0.10, 0.18] & N/(m/s) \\
+Rotational drag  & $\mathrm{diag}(C_d^{\text{rot}})$ & [0.02, 0.02, 0.02] & N$\cdot$m/(rad/s) \\
+\hline
+\end{tabular}
+\end{table}
+
+
+\subsection{Classical Hierarchical Baseline}
+\label{sec:baseline}
+
+
+The baseline is a four-stage classical hierarchical controller implementing the full
+supervisory-regulatory decomposition described in the literature
+\parencite{sanders_hierarchical_1998, scattolini_hierarchical_2007}. It serves as a
+representative instance of the architecture class the UHRC is designed to replace.
+
+An Inertial Navigation System Extended Kalman Filter (INSEKF) fuses GPS position and
+Attitude and Heading Reference System (AHRS) orientation estimates at 10\,Hz to
+produce a pose estimate $[\hat{\mathbf{r}}_I, \hat{\mathbf{q}}_{BI}]$. LiDAR
+odometry is provided by an Iterative Closest Point (ICP) registration pipeline
+operating on 2D point cloud keyframes, accumulated into a pose graph optimised via
+Levenberg-Marquardt at fixed intervals of 500 nodes \parencite{gupta_simultaneous_2022,
+milijas_comparison_2021}.
+
+A collision-free path is computed by the A* algorithm on a 2D occupancy grid
+constructed by projecting LiDAR returns onto the ground plane at 2.0\,m cell
+resolution. The grid spans the drone's estimated flight level within a height band
+of $\pm 2.0$\,m. Path feasibility is guaranteed if a collision-free grid path exists
+\parencite{zhou_review_2021}; otherwise the controller holds the previously valid path.
+
+
+A pure pursuit tracker with a fixed lookahead distance of $L_d = 0.8$\,m translates
+the planned waypoint sequence into position setpoints at 10\,Hz
+\parencite{huang_path_2020}.
+
+
+A cascaded PID structure realises the position setpoints. The outer position loop
+maps horizontal position errors to desired roll and pitch references
+$[\phi_d, \theta_d]$ via the standard small-angle coupling
+$\theta_d = a_x^{\mathrm{des}} / g$, $\phi_d = -a_y^{\mathrm{des}} / g$.
+The inner attitude loop generates body wrench commands from attitude and altitude
+errors using derivative-filtered PID controllers on each axis
+\parencite{ren_efficient_2025,bouabdallah_design_2007}.
+
+
+\subsection{UHRC Architecture}
+\label{sec:uhrc_arch}
+
+The UHRC is a two-level recurrent transformer that adapts the HRM architecture
+\parencite{wang_hierarchical_2025} to continuous closed-loop control. At each timestep,
+a high-level module $H$ generates a 3-dimensional velocity subgoal encoding strategic
+intent, and a low-level module $L$ translates that intent together with a rich sensory
+context into a 4-dimensional body wrench command. Both modules maintain persistent
+memory through a rolling carry buffer that replaces the HRM's per-problem hidden state,
+enabling temporal reasoning across the full episode horizon.
+
+
+\subsubsection{Observation Representation}
+\label{sec:obs}
+
+All observations are expressed in the body frame $\mathcal{B}$. This choice renders
+the observation invariant to global heading and position, reducing the domain of the
+mapping the controller must learn: an identical avoidance manoeuvre is appropriate
+regardless of the vehicle's absolute world-frame orientation \cite{liang_nonlinear_2018}.
+The 45-dimensional observation vector is
+
+\begin{equation}
+    \mathbf{o} =
+    \bigl[
+        \underbrace{\mathbf{v}_B^{\top}}_{\times 3},\;
+        \underbrace{\boldsymbol{\omega}_B^{\top}}_{\times 3},\;
+        \underbrace{\mathbf{g}_B^{\top}}_{\times 3},\;
+        \underbrace{\Delta\mathbf{r}_B^{\top}}_{\times 3},\;
+        \underbrace{d_{\mathrm{norm}}}_{\times 1},\;
+        \underbrace{\mathbf{r}_{\mathrm{lidar}}^{\top}}_{\times 32}
+    \bigr]^{\top}
+    \in \mathbb{R}^{45},
+    \label{eq:obs}
+\end{equation}
+where $\mathbf{v}_B = R_{BI}\mathbf{v}_I$ is the body-frame translational velocity,
+$\boldsymbol{\omega}_B$ is the angular velocity, $\mathbf{g}_B = R_{BI}[0, 0, -g]^{\top}$
+encodes attitude implicitly by projecting the gravity vector into $\mathcal{B}$,
+$\Delta\mathbf{r}_B = R_{BI}(\mathbf{r}_{\mathrm{goal}} - \mathbf{r}_I)$ is the
+goal displacement clipped to a maximum range $r_{\max}^{\mathrm{goal}} = 20$\,m,
+$d_{\mathrm{norm}} = \min(\|\Delta\mathbf{r}_B\|, 20) / 20$ is the normalised
+goal distance, and $\mathbf{r}_{\mathrm{lidar}} \in [0, 1]^{32}$ is a 32-ray
+planar LiDAR scan with field of view $\pi$\,rad and maximum range 5.0\,m,
+normalised to the unit interval.
+
+The separate scalar $d_{\mathrm{norm}}$ is included deliberately, without it,
+the goal displacement vector $\Delta\mathbf{r}_B$ loses magnitude information as the
+drone approaches the goal, causing the controller to overshoot. At runtime, the
+observation is standardised by precomputed dataset statistics before being passed
+to the model.
+
+
+\subsubsection{Dual-Stream Input Encoder}
+\label{sec:encoder}
+
+The 13 scalar kinematic features $[\mathbf{v}_B^{\top}, \boldsymbol{\omega}_B^{\top},
+\mathbf{g}_B^{\top}, \Delta\mathbf{r}_B^{\top}, d_{\mathrm{norm}}]$ and the 32-ray
+LiDAR scan are processed by separate encoder branches before fusion.
+
+A two-layer MLP first projects the 13-dimensional input to
+$\mathbb{R}^{h/2}$ through a scaled hyperbolic tangent:
+\begin{equation}
+    \mathbf{s} = W_2 \tanh\!\bigl(\sqrt{H}\cdot W_1 \mathbf{o}_{\mathrm{kin}} + \mathbf{b}_1\bigr),
+\end{equation}
+where $h = 128$ is the model hidden dimension. The scaling factor $\sqrt{H}$
+expands the effective dynamic range of kinematic inputs into the regime where $\tanh$
+provides informative gradients, preventing early saturation during training.
+
+The 32 normalised range returns are processed as a 1D signal
+by a two-stage convolutional encoder:
+\begin{equation}
+    \mathbf{l} = W_{\mathrm{proj}}\,
+        \mathrm{Flatten}\!\bigl(
+            \sigma\!\bigl(\mathrm{Conv}_{k=3}^{16}(
+                \sigma(\mathrm{Conv}_{k=5}^{16}(\mathbf{o}_{\mathrm{lidar}})))\bigr)
+        \bigr),
+\end{equation}
+where $\sigma$ denotes the SiLU activation, $\mathrm{Conv}_{k}^{c}$ denotes a
+1D convolution with $c$ output channels and kernel size $k$ (same padding), and
+$W_{\mathrm{proj}} \in \mathbb{R}^{(h/2) \times 512}$ projects the flattened
+$16 \times 32 = 512$ feature map to $\mathbb{R}^{h/2}$.
+
+The two $h/2$-dimensional branch outputs are concatenated and
+linearly projected to a single embedding $\mathbf{e}_t = W_f[\mathbf{s}; \mathbf{l}]
+\in \mathbb{R}^{h}$ representing the current observation at timestep $t$.
+
+
+\subsubsection{Transformer Reasoning Blocks}
+\label{sec:blocks}
+
+Both the $H$-module and $L$-module are composed of stacked \texttt{UHRCBlock} layers,
+each implementing a standard pre-normalised transformer encoder block:
+\begin{align}
+    \mathbf{z}' &= \mathrm{RMSNorm}\bigl(\mathbf{z} + \mathrm{MHA}(\mathbf{z})\bigr),
+    \label{eq:attn_block} \\
+    \mathbf{z}'' &= \mathrm{RMSNorm}\bigl(\mathbf{z}' + \mathrm{SwiGLU}(\mathbf{z}')\bigr),
+    \label{eq:mlp_block}
+\end{align}
+where $\mathrm{MHA}(\cdot)$ is non-causal multi-head self-attention with
+$n_h = 4$ heads and head dimension $d_h = h / n_h = 32$, and $\mathrm{SwiGLU}(\cdot)$
+is the gated feed-forward network
+\begin{equation}
+    \mathrm{SwiGLU}(\mathbf{z}) =
+        W_{\downarrow}\bigl(\mathrm{SiLU}(W_g \mathbf{z}) \odot W_u \mathbf{z}\bigr),
+\end{equation}
+with intermediate dimension $d_{\mathrm{ff}} = 512$. Non-causal attention is appropriate here because the carry
+represents a temporal history rather than an autoregressive prediction task, each
+position can attend to all other positions, including more recent ones.
+
+Rotary Positional Encoding (RoPE) is applied independently to the query and key
+matrices within each attention head, encoding the relative age of each position in
+the carry buffer. For a sequence of length $T$ and head dimension $d_h$, the
+rotary frequencies are
+\begin{equation}
+    \theta_i = \frac{1}{10000^{2i/d_h}}, \quad i = 0, 1, \ldots, d_h/2 - 1,
+\end{equation}
+with cosine and sine tables precomputed up to the maximum sequence length of
+$T_{\max} = \mathrm{carry\_len} + 1 = 17$. RoPE is preferred over learned absolute
+positional embeddings because it generalises to sequence positions not seen during
+training \parencite{wang_hierarchical_2025}.
+
+
+\subsubsection{Persistent Temporal Carry Buffer}
+\label{sec:carry}
+
+In the original HRM, hidden states $\mathbf{z}_H$ and $\mathbf{z}_L$ are
+re-initialised for each input problem. In closed-loop control, the controller must
+maintain situational awareness across successive timesteps, tracking velocity history,
+recognising developing obstacle geometries, and anticipating trajectory evolution.
+The UHRC therefore treats the hidden states as persistent rolling buffers:
+\begin{equation}
+    \mathbf{z}_{H}, \mathbf{z}_{L} \in \mathbb{R}^{B \times C \times h},
+\end{equation}
+where $B$ is the batch size (1 at inference), $C = 16$ is the carry length, and
+$h = 128$ is the hidden dimension. At each timestep, the new observation embedding
+$\mathbf{e}_t$ is appended to the buffer and the oldest entry is discarded:
+\begin{equation}
+    \mathrm{roll\_carry}(\mathbf{z}, \mathbf{e}_t) =
+        \bigl[\mathbf{z}_{:,1:C,:};\; \mathbf{e}_t^{\top}\bigr]
+    \in \mathbb{R}^{B \times C \times h},
+\end{equation}
+providing a fixed-length sliding window of temporal context without unbounded memory
+growth. The carry therefore functions as a learned recurrent state that compresses
+the episode's observational history into a fixed-size representation, structurally
+analogous to the reasoning context in recurrent language models.
+
+Carry tokens appended to the buffer are always gradient-detached (\texttt{DETACH\_CARRY=True}).
+This truncates backpropagation through the carry boundary, preventing gradient chains
+from extending beyond the training sequence window of length $T_{\mathrm{seq}} = 8$
+steps. Empirical evaluation confirmed that this convention does not impair the quality
+of learned temporal representations within the window, consistent with findings in
+the HRM literature \parencite{wang_hierarchical_2025}. At the start of each episode, both
+buffers are initialised to learned constant vectors $\mathbf{h}_H^{\mathrm{init}}$
+and $\mathbf{h}_L^{\mathrm{init}}$ tiled to shape $[1, C, h]$.
+
+
+\subsubsection{H-L Mutual Refinement and One-Step Gradient Approximation}
+\label{sec:hl_cycles}
+
+The $H$- and $L$-modules interact through $H_\mathrm{cyc} = 2$ outer cycles each
+containing $L_\mathrm{cyc} = 2$ inner $L$-module passes. At each step, the full
+sequence $\mathbf{z}_H^{(t)} \in \mathbb{R}^{B \times 17 \times h}$ is formed by
+concatenating the $C = 16$ carry tokens with the current observation embedding:
+\begin{equation}
+    \mathbf{z}_H^{(t)} = \bigl[\mathbf{Z}_H;\; \mathbf{e}_t^{\top}\bigr], \quad
+    \mathbf{z}_L^{(t)} = \bigl[\mathbf{Z}_L;\; \mathbf{e}_t^{\top}\bigr].
+\end{equation}
+An observation re-injection tensor
+$\mathbf{I}_{\mathrm{obs}} \in \mathbb{R}^{B \times 17 \times h}$ is constructed
+with zeros at carry positions and $\mathbf{e}_t$ at position 16, ensuring the raw
+observation is available as an additive bias at every $L$-module call — a critical
+structural correspondence to the HRM's input injection mechanism \parencite{wang_hierarchical_2025}.
+
+To bound the gradient graph depth and maintain training stability, the UHRC adopts
+the one-step gradient approximation from the HRM: all but the final module call in
+the refinement cycle are computed under \texttt{torch.no\_grad()}, and only a single
+$L$-pass followed by a single $H$-pass contribute to the gradient. With
+$H_\mathrm{cyc} = 2$ and $L_\mathrm{cyc} = 2$, the execution schedule is:
+\begin{enumerate}[label=\roman*.]
+    \item \textbf{No-grad}: $L \to L \to H \to L$ \quad (3 $L$-calls, 1 $H$-call)
+    \item \textbf{Gradient}: $L \to H$ \quad (1 $L$-call, 1 $H$-call)
+\end{enumerate}
+The effective gradient path traverses $2 + 2 = 4$ transformer layers in total,
+roughly 3.5$\times$ shallower than the full 14-layer computational graph, preventing
+gradient vanishing while retaining the representational benefit of multiple refinement
+rounds. The $L$-module update at each call is
+\begin{equation}
+    \mathbf{z}_L \leftarrow \mathcal{L}\bigl(\mathbf{z}_L + \mathbf{z}_H + \mathbf{I}_{\mathrm{obs}}\bigr),
+\end{equation}
+and the $H$-module update is
+\begin{equation}
+    \mathbf{z}_H \leftarrow \mathcal{H}(\mathbf{z}_H + \mathbf{z}_L),
+\end{equation}
+where $\mathcal{L}(\cdot)$ and $\mathcal{H}(\cdot)$ denote the respective stacks of
+\texttt{UHRCBlock} layers.
+
+
+\subsubsection{Subgoal Generation, Gated Injection, and Action Output}
+\label{sec:subgoal}
+
+Following the final $H$-module update, the terminal hidden state $\mathbf{z}_H[:,16,:]
+\in \mathbb{R}^{B \times h}$ (the most recent position in the carry sequence) is
+decoded by a two-layer MLP planning head into a 3-dimensional body-frame velocity
+subgoal:
+\begin{equation}
+    \hat{\mathbf{v}}_{\mathrm{sub}} = W_2\,\mathrm{SiLU}(W_1 \mathbf{z}_H[:,16,:])
+    \in \mathbb{R}^{B \times 3}.
+\end{equation}
+This subgoal encodes the H-module's strategic intent as a desired velocity vector
+$[v_x, v_y, v_z]$ in the body frame, providing a physically interpretable interface
+between the two modules.
+
+The subgoal is injected into the $L$-module through a gated additive mechanism
+designed to modulate the reactive representation without overriding it:
+\begin{align}
+    \mathbf{g} &= \sigma\bigl(W_g \hat{\mathbf{v}}_{\mathrm{sub}} + \mathbf{b}_g\bigr)
+        \in (0,1)^{B \times h}, \label{eq:gate} \\
+    \mathbf{c} &= \bigl(W_p \hat{\mathbf{v}}_{\mathrm{sub}}\bigr) \odot \mathbf{g}
+        \in \mathbb{R}^{B \times h}, \label{eq:context}
+\end{align}
+where $\sigma$ is the element-wise sigmoid. The gate bias is initialised to
+$\mathbf{b}_g = +2.0$, so that $\sigma(+2) \approx 0.88$ at the start of training
+keeping the gate mostly open and allowing the subgoal signal to propagate freely
+before the planning head has converged. The gated context is broadcast across the
+carry sequence and the $L$-module performs a final two-layer attention pass:
+\begin{equation}
+    \mathbf{z}_L^{\mathrm{final}} =
+        \mathcal{L}\bigl(\mathbf{z}_L + \mathbf{c}\cdot\mathbf{1}_{17}^{\top}\bigr),
+\end{equation}
+from which the body-frame wrench action is decoded from the terminal position:
+\begin{equation}
+    \hat{\mathbf{u}} = W_a\,\mathbf{z}_L^{\mathrm{final}}[:,16,:]
+        = [\hat{F}_z,\; \hat{\tau}_x,\; \hat{\tau}_y,\; \hat{\tau}_z]^{\top}
+        \in \mathbb{R}^{4}.
+\end{equation}
+The action head weight is initialised with standard deviation $10^{-2}$ and the
+thrust bias is set to $\hat{F}_z^{(0)} = 9.81$\,N (hover thrust for a 1\,kg vehicle),
+ensuring the network produces a stable hover at initialisation before any learning
+has occurred. The full architectural configuration is summarised in
+Table~\ref{tab:arch_config}.
+
+\begin{table}[ht]
+\centering
+\caption{UHRC fixed architectural configuration.}
+\label{tab:arch_config}
+\begin{tabular}{lll}
+\hline
+Parameter & Symbol & Value \\
+\hline
+State dimension       & $d_s$               & 45 \\
+LiDAR dimension       & $d_{\mathrm{lidar}}$& 32 \\
+Action dimension      & $d_a$               & 4 \\
+Subgoal dimension     & $d_{\mathrm{sub}}$  & 3 \\
+Hidden size           & $h$                 & 128 \\
+Carry length          & $C$                 & 16 \\
+Attention heads       & $n_h$               & 4 \\
+Head dimension        & $d_h$               & 32 \\
+FFN intermediate      & $d_{\mathrm{ff}}$   & 512 \\
+H-module layers       & $N_H$               & 2 \\
+L-module layers       & $N_L$               & 2 \\
+H-level cycles        & $H_{\mathrm{cyc}}$  & 2 \\
+L-level cycles        & $L_{\mathrm{cyc}}$  & 2 \\
+RoPE base frequency   & ---                 & 10{,}000 \\
+Hover thrust bias     & $F_z^{(0)}$         & 9.81\,N \\
+\hline
+\end{tabular}
+\end{table}
+
+
+\subsection{Expert Data Generation}
+\label{sec:datagen}
+
+
+Training data are generated by rolling out an expert policy comprising an A* path
+planner, a pure-pursuit tracker, and the cascaded PID attitude controller on 500
+successful simulated episodes at $\Delta t = 0.01$\,s per step
+\parencite{levine_end--end_2016, le_mero_survey_2022}.
+
+
+At the start of each episode, a 2D occupancy grid is constructed at a resolution of
+$r_{\mathrm{grid}} = 0.25$\,m per cell, spanning the convex hull of the start
+position, goal position, and all obstacle extents with a 2.0\,m margin. Circular
+obstacles are inflated by $r_{\mathrm{inf}} = 0.25$\,m to account for vehicle body
+radius. The A* algorithm searches an 8-connected neighbourhood using the octile
+heuristic, guaranteeing the shortest collision-free path if one exists
+\parencite{zhou_review_2021}. Episodes for which no path exists are discarded before
+simulation begins.
+
+
+The planned path is smoothed by three passes of a cubic averaging filter and tracked
+by a pure-pursuit controller with lookahead $L_d = 1.0$\,m and maximum speed
+$V_{\max} = 2.0$\,m/s. Speed is linearly ramped down to $0.3$\,m/s within 2\,m of
+the goal. Upon entering a $0.1$\,m goal acceptance radius, the tracker issues a zero
+velocity command for 150 additional steps (1.5\,s), demonstrating the hover
+termination behaviour to the model.
+
+
+To promote policy generalisation beyond the default $+x$-direction transit, six
+episode categories are sampled according to the distribution in
+Table~\ref{tab:episode_types}.
+
+\begin{table}[ht]
+\centering
+\caption{Episode type distribution for expert data generation.}
+\label{tab:episode_types}
+\begin{tabular}{lll}
+\hline
+Type & Proportion & Description \\
+\hline
+Normal      & 35\% & Long-range $+x$ transit with 4--8 obstacles \\
+Omnidirectional & 20\% & Random start/goal in full arena, any heading \\
+No obstacle & 15\% & Long-range transit, obstacle-free \\
+Close       & 10\% & Short-range (1--5\,m), any direction, 0--2 obstacles \\
+Recovery    & 10\% & Start beyond or beside goal; teaches re-acquisition \\
+Tight gap   & 10\% & Symmetric wall pair with 0.5--0.8\,m half-gap \\
+\hline
+\end{tabular}
+\end{table}
+
+The omnidirectional episodes are critical for eliminating the directional bias
+intrinsic to the dominant $+x$-transit training distribution: without them, the
+learned policy fails to navigate in the $-x$ or $\pm y$ directions.
+
+Every 50 steps with probability 0.3, the current state receives a Gaussian velocity
+perturbation ($\sigma = 0.2$\,m/s) and a small random yaw offset
+($|\delta\psi| \leq 0.15$\,rad). This DAgger-style augmentation \parencite{levine_end--end_2016}
+exposes the expert to a wider distribution of states and prevents the compounding
+error pathology characteristic of pure behavioural cloning.
+
+
+Episodes are included only if: (i) the drone reached the goal without collision;
+(ii) the goal distance decreased monotonically over coarse 100-step windows; and
+(iii) the average velocity subgoal magnitude during the final hover phase was below
+$0.3$\,m/s. These criteria filter episodes in which the expert made insufficient
+progress or failed to demonstrate a clean stopping behaviour.
+
+
+\subsection{Behavioural Cloning Training}
+\label{sec:training}
+
+
+\subsubsection{Dataset Construction}
+
+The \texttt{ControlDataset} constructs sequence windows of length
+$T_{\mathrm{seq}} = 8$ timesteps from the stored episode data. Windows never cross
+episode boundaries; windows that begin within the first $T_{\mathrm{seq}} - 1$ steps
+of an episode are left-padded with zeros. The 45-dimensional observations are
+$z$-scored using dataset-wide mean and standard deviation statistics. Actions and
+velocity subgoals are retained in their raw physical units (N and m/s respectively)
+so that the magnitude of control effort and velocity urgency are preserved as
+supervisory signals. The dataset is split into training and validation subsets by
+episode, with 10\% of episodes reserved for validation.
+
+\subsubsection{Loss Function}
+
+Three loss terms are combined:
+\begin{equation}
+    \mathcal{L} = \mathcal{L}_{\mathrm{act}} +
+                  \alpha_s \mathcal{L}_{\mathrm{sub}} +
+                  \alpha_t \mathcal{L}_{\mathrm{trk}},
+    \label{eq:total_loss}
+\end{equation}
+with $\alpha_s = 0.1$ and $\alpha_t = 0.5$.
+
+
+The four action components $[F_z, \tau_x, \tau_y, \tau_z]$ have very different
+variances in the training data: thrust is tightly concentrated near the hover value
+$F_z^{\mathrm{hover}} = 9.81$\,N, while the torque components span a much smaller
+absolute range but carry proportionally more information per unit deviation. A
+per-component weighted MSE is used to compensate:
+\begin{equation}
+    \mathcal{L}_{\mathrm{act}} =
+        \Bigl\langle
+            \bigl(\hat{\mathbf{u}} - \mathbf{u}^*\bigr)^{\!\top}
+            \mathrm{diag}(\mathbf{w}_a)
+            \bigl(\hat{\mathbf{u}} - \mathbf{u}^*\bigr)
+        \Bigr\rangle,
+\end{equation}
+where $\langle\cdot\rangle$ denotes the mean over the batch and $\mathbf{w}_a =
+[0.68, 71.4, 69.0, 50.0] / \bar{w}_a$ are the normalised component weights.
+
+
+An analogous weighted MSE on the 3-dimensional velocity subgoal:
+\begin{equation}
+    \mathcal{L}_{\mathrm{sub}} =
+        \Bigl\langle
+            \bigl(\hat{\mathbf{v}}_{\mathrm{sub}} - \mathbf{v}_{\mathrm{sub}}^*\bigr)^{\!\top}
+            \mathrm{diag}(\mathbf{w}_s)
+            \bigl(\hat{\mathbf{v}}_{\mathrm{sub}} - \mathbf{v}_{\mathrm{sub}}^*\bigr)
+        \Bigr\rangle,
+\end{equation}
+with weights $\mathbf{w}_s = [1.5, 1.5, 0.1] / \bar{w}_s$. The vertical component
+$v_z$ is down-weighted because episodes are conducted at constant altitude,
+making the vertical subgoal largely uninformative.
+
+
+The H-module subgoal and L-module torques must be physically consistent: pitch torque
+$\tau_y$ produces forward acceleration that realises $v_x$, and roll torque $\tau_x$
+produces lateral acceleration that realises $v_y$. The tracking loss penalises
+misalignment between the horizontal subgoal direction $[v_x, v_y]^{\top}$ and the
+corresponding torque vector $[\tau_y, \tau_x]^{\top}$:
+\begin{equation}
+    \mathcal{L}_{\mathrm{trk}} =
+        \Bigl\langle
+            \max\Bigl(0,
+                -\frac{[\hat{v}_x,\hat{v}_y]}{\|[\hat{v}_x,\hat{v}_y]\| + \epsilon}
+                 \cdot
+                 \frac{[\hat{\tau}_y,\hat{\tau}_x]}{\|[\hat{\tau}_y,\hat{\tau}_x]\| + \epsilon}
+            \Bigr)
+        \Bigr\rangle.
+    \label{eq:tracking_loss}
+\end{equation}
+This term acts as a soft architectural consistency constraint, encouraging the
+inter-module coupling to reflect the correct body-frame dynamics.
+
+\subsubsection{Optimiser and Schedule}
+
+The model is trained with AdamW \cite{levine_end--end_2016} using the configuration
+in Table~\ref{tab:train_config}. A linear warmup phase over the first 5 epochs raises
+the learning rate from zero to its peak value, after which cosine annealing decays it
+to approximately zero over the remaining 15 epochs. Gradients are clipped to a global
+$\ell_2$ norm of 1.0 at each step. Automatic mixed precision (AMP) with a gradient
+scaler is employed, reducing memory consumption to accommodate a batch size of 512.
+
+\begin{table}[ht]
+\centering
+\caption{Behavioural cloning training configuration.}
+\label{tab:train_config}
+\begin{tabular}{lll}
+\hline
+Parameter                    & Symbol                     & Value \\
+\hline
+Sequence length              & $T_{\mathrm{seq}}$         & 8 \\
+Batch size                   & $B$                        & 512 \\
+Peak learning rate           & $\eta$                     & $2 \times 10^{-4}$ \\
+Weight decay                 & $\lambda$                  & $3 \times 10^{-3}$ \\
+Gradient clip                & ---                        & 1.0 \\
+Warmup epochs                & ---                        & 5 \\
+Total epochs                 & ---                        & 20 \\
+Validation split             & ---                        & 10\% (by episode) \\
+Subgoal loss weight          & $\alpha_s$                 & 0.1 \\
+Tracking loss weight         & $\alpha_t$                 & 0.5 \\
+Action weights               & $\mathbf{w}_a$             & [0.68, 71.4, 69.0, 50.0] \\
+Subgoal weights              & $\mathbf{w}_s$             & [1.5, 1.5, 0.1] \\
+\hline
+\end{tabular}
+\end{table}
+
+
+\subsection{Comparative Evaluation Protocol}
+\label{sec:eval_protocol}
+
+
+Both controllers are evaluated across five structured test cases (TC01--TC05) of
+increasing environmental complexity. To ensure a fair comparison, both controllers
+receive ideal state feedback from the same underlying simulation state; neither
+suffers from sensor noise or state estimation error. Start positions, goal positions,
+and obstacle configurations are seeded identically for both controllers. Each
+test case is repeated for $N = 30$ randomised Monte Carlo trials and metrics are
+averaged over successful and failed trials.
+
+\textbf{TC01 -- Open Transit.} Straight-line goal-seeking in an obstacle-free
+environment, establishing baseline trajectory tracking performance.
+
+\textbf{TC02 -- Symmetric Corridor.} Six obstacles arranged symmetrically around the
+nominal flight path, testing multi-obstacle avoidance and path quality under spatial
+constraint.
+
+\textbf{TC03 -- Gap Navigation.} Two obstacles forming a 3\,m gap directly in the
+nominal flight path, assessing control precision and gap-threading capability.
+
+\textbf{TC04 -- Dynamic Obstacle Avoidance.} Obstacles are excluded from the
+controller's sensor data until $t \geq 3.0$\,s, then revealed, requiring mid-flight
+reactive replanning. Both controllers receive identical sensor data at each timestep.
+
+\textbf{TC05 -- Parametric Robustness.} The TC02 obstacle configuration is retained
+but the plant dynamics are perturbed: mass $\pm 20$\%, diagonal inertia $\pm 30$\%,
+drag coefficients $\pm 50$\%, and thrust coefficient $k_T$ $\pm 15$\%. This
+characterises each controller's robustness margin under distributional shift.
+
+The primary performance metrics are root mean square error (RMSE) of the Euclidean
+position error, integral absolute error (IAE), integral time-weighted absolute error
+(ITAE), path length ratio (PLR = actual path length / straight-line distance), episode
+success rate (goal reached within 0.5\,m without collision), and collision rate.
 
 \printbibliography
 

@@ -2454,6 +2454,26 @@
     <bcf:citekey order="34" intorder="2">ren_cascade_2016</bcf:citekey>
     <bcf:citekey order="34" intorder="3">abdelhay_modeling_2019</bcf:citekey>
     <bcf:citekey order="34" intorder="4">lopez-sanchez_pid_2023</bcf:citekey>
+    <bcf:citekey order="35" intorder="1">hoffmann_quadrotor_2007</bcf:citekey>
+    <bcf:citekey order="36" intorder="1">shastry_development_2018</bcf:citekey>
+    <bcf:citekey order="37" intorder="1">sanders_hierarchical_1998</bcf:citekey>
+    <bcf:citekey order="37" intorder="2">scattolini_hierarchical_2007</bcf:citekey>
+    <bcf:citekey order="38" intorder="1">gupta_simultaneous_2022</bcf:citekey>
+    <bcf:citekey order="38" intorder="2">milijas_comparison_2021</bcf:citekey>
+    <bcf:citekey order="39" intorder="1">zhou_review_2021</bcf:citekey>
+    <bcf:citekey order="40" intorder="1">huang_path_2020</bcf:citekey>
+    <bcf:citekey order="41" intorder="1">ren_efficient_2025</bcf:citekey>
+    <bcf:citekey order="41" intorder="2">bouabdallah_design_2007</bcf:citekey>
+    <bcf:citekey order="42" intorder="1">wang_hierarchical_2025</bcf:citekey>
+    <bcf:citekey order="43" intorder="1">liang_nonlinear_2018</bcf:citekey>
+    <bcf:citekey order="44" intorder="1">wang_hierarchical_2025</bcf:citekey>
+    <bcf:citekey order="45" intorder="1">wang_hierarchical_2025</bcf:citekey>
+    <bcf:citekey order="46" intorder="1">wang_hierarchical_2025</bcf:citekey>
+    <bcf:citekey order="47" intorder="1">levine_end--end_2016</bcf:citekey>
+    <bcf:citekey order="47" intorder="2">le_mero_survey_2022</bcf:citekey>
+    <bcf:citekey order="48" intorder="1">zhou_review_2021</bcf:citekey>
+    <bcf:citekey order="49" intorder="1">levine_end--end_2016</bcf:citekey>
+    <bcf:citekey order="50" intorder="1">levine_end--end_2016</bcf:citekey>
   </bcf:section>
   <!-- SORTING TEMPLATES -->
   <bcf:sortingtemplate name="nyt">

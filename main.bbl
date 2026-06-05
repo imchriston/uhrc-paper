@@ -595,12 +595,12 @@
     \endentry
     \entry{bouabdallah_pid_2004}{inproceedings}{}
       \name{author}{3}{}{%
-        {{un=0,uniquepart=base,hash=46418fc03f0fcf6e4fa7791dc9cea1f1}{%
+        {{un=2,uniquepart=given,hash=46418fc03f0fcf6e4fa7791dc9cea1f1}{%
            family={Bouabdallah},
            familyi={B\bibinitperiod},
            given={S.},
            giveni={S\bibinitperiod},
-           givenun=0}}%
+           givenun=2}}%
         {{un=0,uniquepart=base,hash=0e4d2db99e509a9273eee5105fda3340}{%
            family={Noth},
            familyi={N\bibinitperiod},
@@ -655,6 +655,52 @@
       \verb https://ieeexplore.ieee.org/document/1389776/
       \endverb
       \keyw{notion,UAV control,quadrotor control,quadrotor dynamics}
+    \endentry
+    \entry{bouabdallah_design_2007}{thesis}{}
+      \name{author}{1}{}{%
+        {{un=2,uniquepart=given,hash=8194dcd7e32b23c65f083bac76ced3dd}{%
+           family={Bouabdallah},
+           familyi={B\bibinitperiod},
+           given={Samir},
+           giveni={S\bibinitperiod},
+           givenun=2}}%
+      }
+      \list{institution}{1}{%
+        {Lausanne, EPFL}%
+      }
+      \list{language}{1}{%
+        {en}%
+      }
+      \strng{namehash}{8194dcd7e32b23c65f083bac76ced3dd}
+      \strng{fullhash}{8194dcd7e32b23c65f083bac76ced3dd}
+      \strng{bibnamehash}{8194dcd7e32b23c65f083bac76ced3dd}
+      \strng{authorbibnamehash}{8194dcd7e32b23c65f083bac76ced3dd}
+      \strng{authornamehash}{8194dcd7e32b23c65f083bac76ced3dd}
+      \strng{authorfullhash}{8194dcd7e32b23c65f083bac76ced3dd}
+      \field{sortinit}{B}
+      \field{sortinithash}{d7095fff47cda75ca2589920aae98399}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{This thesis is about modelling, design and control of Miniature Flying Robots (MFR) with a focus on Vertical Take-Off and Landing (VTOL) systems and specifically, micro quadrotors. It introduces a mathematical model for simulation and control of such systems. It then describes a design methodology for a miniature rotorcraft. The methodology is subsequently applied to design an autonomous quadrotor named OS4. Based on the mathematical model, linear and nonlinear control techniques are used to design and simulate various controllers along this work. The dynamic model and the simulator evolved from a simple set of equations, valid only for hovering, to a complex mathematical model with more realistic aerodynamic coefficients and sensor and actuator models. Two platforms were developed during this thesis. The first one is a quadrotor-like test-bench with off-board data processing and power supply. It was used to safely and easily test control strategies. The second one, OS4, is a highly integrated quadrotor with on-board data processing and power supply. It has all the necessary sensors for autonomous operation. Five different controllers were developed. The first one, based on Lyapunov theory, was applied for attitude control. The second and the third controllers are based on PID and LQ techniques. These were compared for attitude control. The fourth and the fifth approaches use backstepping and sliding-mode concepts. They are applied to control attitude. Finally, backstepping is augmented with integral action and proposed as a single tool to design attitude, altitude and position controllers. This approach is validated through various flight experiments conducted on the OS4.}
+      \field{title}{Design and control of quadrotors with application to autonomous flying}
+      \field{type}{phdthesis}
+      \field{urlday}{27}
+      \field{urlmonth}{10}
+      \field{urlyear}{2025}
+      \field{year}{2007}
+      \field{urldateera}{ce}
+      \verb{doi}
+      \verb 10.5075/EPFL-THESIS-3727
+      \endverb
+      \verb{urlraw}
+      \verb https://infoscience.epfl.ch/handle/20.500.14299/235984
+      \endverb
+      \verb{url}
+      \verb https://infoscience.epfl.ch/handle/20.500.14299/235984
+      \endverb
+      \keyw{Autonomous systems,Backstepping,Dynamic Modelling,MAV,PID control,Quadrotor,quadrotor control,quadrotor model}
     \endentry
     \entry{chen_slam_2022}{article}{}
       \name{author}{7}{}{%
@@ -1349,12 +1395,12 @@
     \endentry
     \entry{huang_towards_2023}{misc}{}
       \name{author}{2}{}{%
-        {{un=0,uniquepart=base,hash=0ec4e22bca565a90e626769bfaa859a3}{%
+        {{un=1,uniquepart=given,hash=0ec4e22bca565a90e626769bfaa859a3}{%
            family={Huang},
            familyi={H\bibinitperiod},
            given={Jie},
            giveni={J\bibinitperiod},
-           givenun=0}}%
+           givenun=1}}%
         {{un=0,uniquepart=base,hash=2b17355b815c9790ad364fa8a3ba287c}{%
            family={Chang},
            familyi={C\bibinitperiod},
@@ -1400,6 +1446,73 @@
       \verb http://arxiv.org/abs/2212.10403
       \endverb
       \keyw{notion,reasoning model,model based reasoning,large language models}
+    \endentry
+    \entry{huang_path_2020}{inproceedings}{}
+      \name{author}{4}{}{%
+        {{un=1,uniquepart=given,hash=d13cd94e0c43a558690c3cd84bc78243}{%
+           family={Huang},
+           familyi={H\bibinitperiod},
+           given={Yaofu},
+           giveni={Y\bibinitperiod},
+           givenun=1}}%
+        {{un=0,uniquepart=base,hash=694493ac50f2625151d17508a4c8c135}{%
+           family={Tian},
+           familyi={T\bibinitperiod},
+           given={Zengshan},
+           giveni={Z\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=2f37a4156bd8f2fffa4aeecbf6e010a0}{%
+           family={Jiang},
+           familyi={J\bibinitperiod},
+           given={Qing},
+           giveni={Q\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=cc1536d20f1b69f243fa99f1d22148cd}{%
+           family={Xu},
+           familyi={X\bibinitperiod},
+           given={Junxing},
+           giveni={J\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{location}{1}{%
+        {Weihai, China}%
+      }
+      \list{publisher}{1}{%
+        {IEEE}%
+      }
+      \strng{namehash}{d3064e1946612685ca4da3e2f470cb36}
+      \strng{fullhash}{29d0f0ac59befa44a894a45325984170}
+      \strng{bibnamehash}{d3064e1946612685ca4da3e2f470cb36}
+      \strng{authorbibnamehash}{d3064e1946612685ca4da3e2f470cb36}
+      \strng{authornamehash}{d3064e1946612685ca4da3e2f470cb36}
+      \strng{authorfullhash}{29d0f0ac59befa44a894a45325984170}
+      \field{sortinit}{H}
+      \field{sortinithash}{23a3aa7c24e56cfa16945d55545109b5}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{2020 {IEEE} 2nd {International} {Conference} on {Civil} {Aviation} {Safety} and {Information} {Technology} ({ICCASIT}}
+      \field{isbn}{978-1-7281-9948-1}
+      \field{month}{10}
+      \field{title}{Path {Tracking} {Based} on {Improved} {Pure} {Pursuit} {Model} and {PID}}
+      \field{urlday}{24}
+      \field{urlmonth}{3}
+      \field{urlyear}{2026}
+      \field{year}{2020}
+      \field{urldateera}{ce}
+      \field{pages}{359\bibrangedash 364}
+      \range{pages}{6}
+      \verb{doi}
+      \verb 10.1109/ICCASIT50869.2020.9368694
+      \endverb
+      \verb{urlraw}
+      \verb https://ieeexplore.ieee.org/document/9368694/
+      \endverb
+      \verb{url}
+      \verb https://ieeexplore.ieee.org/document/9368694/
+      \endverb
+      \keyw{quadrotor control,pure pursuit,pathe tracking}
     \endentry
     \entry{huntenburg_large-scale_2018}{article}{}
       \name{author}{3}{}{%
@@ -3261,12 +3374,12 @@
     \endentry
     \entry{ren_cascade_2016}{inproceedings}{}
       \name{author}{6}{}{%
-        {{un=0,uniquepart=base,hash=ad467634156fc07539ea6d3c0d5bb59a}{%
+        {{un=1,uniquepart=given,hash=ad467634156fc07539ea6d3c0d5bb59a}{%
            family={Ren},
            familyi={R\bibinitperiod},
            given={Jiao},
            giveni={J\bibinitperiod},
-           givenun=0}}%
+           givenun=1}}%
         {{un=0,uniquepart=base,hash=f929c83acb218f5515440800cc9c46cb}{%
            family={Liu},
            familyi={L\bibinitperiod},
@@ -3337,6 +3450,60 @@
       \verb https://ieeexplore.ieee.org/document/7831807/
       \endverb
       \keyw{quadrotor control,quadrotor dynamics,quadrotor model,cascaded control,PID control}
+    \endentry
+    \entry{ren_efficient_2025}{article}{}
+      \name{author}{2}{}{%
+        {{un=1,uniquepart=given,hash=40187d7090673027cecf41e939fa01fe}{%
+           family={Ren},
+           familyi={R\bibinitperiod},
+           given={Tianyu},
+           giveni={T\bibinitperiod},
+           givenun=1}}%
+        {{un=0,uniquepart=base,hash=68dfef9d77ce12b66bda88050bbeffda}{%
+           family={Jebelli},
+           familyi={J\bibinitperiod},
+           given={Houtan},
+           giveni={H\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{language}{1}{%
+        {en}%
+      }
+      \strng{namehash}{14769ebe1b640271a7b31104cec7f465}
+      \strng{fullhash}{14769ebe1b640271a7b31104cec7f465}
+      \strng{bibnamehash}{14769ebe1b640271a7b31104cec7f465}
+      \strng{authorbibnamehash}{14769ebe1b640271a7b31104cec7f465}
+      \strng{authornamehash}{14769ebe1b640271a7b31104cec7f465}
+      \strng{authorfullhash}{14769ebe1b640271a7b31104cec7f465}
+      \field{sortinit}{R}
+      \field{sortinithash}{5e1c39a9d46ffb6bebd8f801023a9486}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{issn}{10939687}
+      \field{journaltitle}{Computer-Aided Civil and Infrastructure Engineering}
+      \field{month}{5}
+      \field{number}{12}
+      \field{title}{Efficient {3D} robotic mapping and navigation method in complex construction environments}
+      \field{urlday}{24}
+      \field{urlmonth}{3}
+      \field{urlyear}{2026}
+      \field{volume}{40}
+      \field{year}{2025}
+      \field{urldateera}{ce}
+      \field{pages}{1580\bibrangedash 1605}
+      \range{pages}{26}
+      \verb{doi}
+      \verb 10.1111/mice.13353
+      \endverb
+      \verb{urlraw}
+      \verb https://linkinghub.elsevier.com/retrieve/pii/S1093968726000137
+      \endverb
+      \verb{url}
+      \verb https://linkinghub.elsevier.com/retrieve/pii/S1093968726000137
+      \endverb
+      \keyw{mapping}
     \endentry
     \entry{roberts_optimal_2001}{article}{}
       \name{author}{2}{}{%
@@ -3808,6 +3975,69 @@
       \verb https://linkinghub.elsevier.com/retrieve/pii/S0957417423009971
       \endverb
       \keyw{notion,reinforcement learning}
+    \endentry
+    \entry{shastry_development_2018}{inproceedings}{}
+      \name{author}{3}{}{%
+        {{un=0,uniquepart=base,hash=eb066c6c0d1674d8245bbb010f327be2}{%
+           family={Shastry},
+           familyi={S\bibinitperiod},
+           given={Abhishek\bibnamedelima K.},
+           giveni={A\bibinitperiod\bibinitdelim K\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=d45ab3580d41e49c3c9a056d1a612b6b}{%
+           family={Kothari},
+           familyi={K\bibinitperiod},
+           given={Mangal},
+           giveni={M\bibinitperiod},
+           givenun=0}}%
+        {{un=0,uniquepart=base,hash=aff1c675a12968974592b37b2e324288}{%
+           family={Abhishek},
+           familyi={A\bibinitperiod},
+           given={Abhishek},
+           giveni={A\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{language}{1}{%
+        {en}%
+      }
+      \list{location}{1}{%
+        {Kissimmee, Florida}%
+      }
+      \list{publisher}{2}{%
+        {American Institute of Aeronautics}%
+        {Astronautics}%
+      }
+      \strng{namehash}{373034099465553331ec4eb76acf9cee}
+      \strng{fullhash}{373034099465553331ec4eb76acf9cee}
+      \strng{bibnamehash}{373034099465553331ec4eb76acf9cee}
+      \strng{authorbibnamehash}{373034099465553331ec4eb76acf9cee}
+      \strng{authornamehash}{373034099465553331ec4eb76acf9cee}
+      \strng{authorfullhash}{373034099465553331ec4eb76acf9cee}
+      \field{sortinit}{S}
+      \field{sortinithash}{b164b07b29984b41daf1e85279fbc5ab}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{2018 {AIAA} {Guidance}, {Navigation}, and {Control} {Conference}}
+      \field{isbn}{978-1-62410-526-5}
+      \field{month}{1}
+      \field{title}{Development of {Flight} {Dynamics} {Model} of {Quadrotor}}
+      \field{urlday}{12}
+      \field{urlmonth}{10}
+      \field{urlyear}{2025}
+      \field{year}{2018}
+      \field{urldateera}{ce}
+      \verb{doi}
+      \verb 10.2514/6.2018-1850
+      \endverb
+      \verb{urlraw}
+      \verb https://arc.aiaa.org/doi/10.2514/6.2018-1850
+      \endverb
+      \verb{url}
+      \verb https://arc.aiaa.org/doi/10.2514/6.2018-1850
+      \endverb
+      \keyw{notion,quadrotor control,quadrotor dynamics}
     \endentry
     \entry{siljak_decentralized_2013}{book}{}
       \name{author}{1}{}{%
@@ -4539,14 +4769,74 @@
       \endverb
       \keyw{hierarchical control,multi-scal decision making,multi-scale model,notion,two-level planning}
     \endentry
+    \entry{zhou_review_2021}{misc}{}
+      \name{author}{3}{}{%
+        {{un=1,uniquepart=given,hash=265080dc30442df0e33923fb44ba455e}{%
+           family={Zhou},
+           familyi={Z\bibinitperiod},
+           given={Chengmin},
+           giveni={C\bibinitperiod},
+           givenun=1}}%
+        {{un=1,uniquepart=given,hash=de2800dbc4cd88500044b1d3bcc9fa25}{%
+           family={Huang},
+           familyi={H\bibinitperiod},
+           given={Bingding},
+           giveni={B\bibinitperiod},
+           givenun=1}}%
+        {{un=0,uniquepart=base,hash=614bb1650747649217741abb174af339}{%
+           family={Fränti},
+           familyi={F\bibinitperiod},
+           given={Pasi},
+           giveni={P\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{publisher}{1}{%
+        {arXiv}%
+      }
+      \strng{namehash}{ff6e292d249ffa2f4a8e70a81f2f5753}
+      \strng{fullhash}{ff6e292d249ffa2f4a8e70a81f2f5753}
+      \strng{bibnamehash}{ff6e292d249ffa2f4a8e70a81f2f5753}
+      \strng{authorbibnamehash}{ff6e292d249ffa2f4a8e70a81f2f5753}
+      \strng{authornamehash}{ff6e292d249ffa2f4a8e70a81f2f5753}
+      \strng{authorfullhash}{ff6e292d249ffa2f4a8e70a81f2f5753}
+      \field{sortinit}{Z}
+      \field{sortinithash}{96892c0b0a36bb8557c40c49813d48b3}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{We investigate and analyze principles of typical motion planning algorithms. These include traditional planning algorithms, supervised learning, optimal value reinforcement learning, policy gradient reinforcement learning. Traditional planning algorithms we investigated include graph search algorithms, sampling-based algorithms, and interpolating curve algorithms. Supervised learning algorithms include MSVM, LSTM, MCTS and CNN. Optimal value reinforcement learning algorithms include Q learning, DQN, double DQN, dueling DQN. Policy gradient algorithms include policy gradient method, actor-critic algorithm, A3C, A2C, DPG, DDPG, TRPO and PPO. New general criteria are also introduced to evaluate performance and application of motion planning algorithms by analytical comparisons. Convergence speed and stability of optimal value and policy gradient algorithms are specially analyzed. Future directions are presented analytically according to principles and analytical comparisons of motion planning algorithms. This paper provides researchers with a clear and comprehensive understanding about advantages, disadvantages, relationships, and future of motion planning algorithms in robotics, and paves ways for better motion planning algorithms.}
+      \field{annotation}{Comment: 38 pages}
+      \field{month}{2}
+      \field{note}{arXiv:2102.02376 [cs]}
+      \field{title}{A review of motion planning algorithms for intelligent robotics}
+      \field{urlday}{17}
+      \field{urlmonth}{9}
+      \field{urlyear}{2025}
+      \field{year}{2021}
+      \field{urldateera}{ce}
+      \verb{doi}
+      \verb 10.48550/arXiv.2102.02376
+      \endverb
+      \verb{file}
+      \verb Full Text PDF:C\:\\Users\\nunes\\Zotero\\storage\\B9LM5T8C\\Zhou et al. - 2021 - A review of motion planning algorithms for intelligent robotics.pdf:application/pdf;Snapshot:C\:\\Users\\nunes\\Zotero\\storage\\ZAKAZVJB\\2102.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb http://arxiv.org/abs/2102.02376
+      \endverb
+      \verb{url}
+      \verb http://arxiv.org/abs/2102.02376
+      \endverb
+      \keyw{notion,planning algorithms}
+    \endentry
     \entry{zhou_two-level_2017}{article}{}
       \name{author}{4}{}{%
-        {{un=0,uniquepart=base,hash=fd11ffb97e630ca2eaa5651a73c176e0}{%
+        {{un=1,uniquepart=given,hash=fd11ffb97e630ca2eaa5651a73c176e0}{%
            family={Zhou},
            familyi={Z\bibinitperiod},
            given={Zhao},
            giveni={Z\bibinitperiod},
-           givenun=0}}%
+           givenun=1}}%
         {{un=0,uniquepart=base,hash=3aa279196551f6d4f6429776156250b6}{%
            family={De\bibnamedelima Schutter},
            familyi={D\bibinitperiod\bibinitdelim S\bibinitperiod},
