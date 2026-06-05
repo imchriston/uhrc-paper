@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.5.8)  5 JUN 2026 16:02
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.5.8)  5 JUN 2026 16:21
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -765,57 +765,57 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 
 {/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}{/usr/share/texmf/fonts/enc/dvips/lm/lm-ec.enc}] [2] [3]
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <12> on input line 266.
+(Font)              <12> on input line 265.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <8> on input line 266.
+(Font)              <8> on input line 265.
 LaTeX Font Info:    External font `lmex10' loaded for size
-(Font)              <6> on input line 266.
+(Font)              <6> on input line 265.
  [4{/usr/share/texmf/fonts/enc/dvips/lm/lm-mathsy.enc}{/usr/share/texmf/fonts/enc/dvips/lm/lm-rm.enc}{/usr/share/texmf/fonts/enc/dvips/lm/lm-mathex.enc}{/usr/share/texmf/fonts/enc/dvips/lm/lm-mathit.enc}]
-Overfull \hbox (12.6013pt too wide) in paragraph at lines 354--358
+Overfull \hbox (12.6013pt too wide) in paragraph at lines 353--357
 \T1/lmr/m/n/12 The base-line is a four-stage clas-si-cal hi-er-ar-chi-cal con-troller im-ple-ment-ing the full supervisory-
  []
 
 [5] [6]
-LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 477.
+LaTeX Font Info:    Trying to load font information for T1+lmtt on input line 476.
  (/usr/share/texmf/tex/latex/lm/t1lmtt.fd
 File: t1lmtt.fd 2015/05/01 v1.6.1 Font defs for Latin Modern
 ) [7]
-Overfull \hbox (12.15175pt too wide) in paragraph at lines 533--541
+Overfull \hbox (12.15175pt too wide) in paragraph at lines 532--540
 []\T1/lmr/m/n/12 Carry to-kens ap-pended to the buffer are al-ways gradient-detached (\T1/lmtt/m/n/12 DETACH_CARRY=True\T1/lmr/m/n/12 ).
  []
 
 [8] [9] [10] [11] [12] [13]
-Overfull \hbox (1.0651pt too wide) in paragraph at lines 873--873
+Overfull \hbox (1.0651pt too wide) in paragraph at lines 872--872
 [][]\T1/lmr/m/n/12 Dai, Hongkai et al. (Sept. 2021). \T1/lmr/m/it/12 Lyapunov-stable neural-network con-trol\T1/lmr/m/n/12 . arXiv:2109.14152
  []
 
 
-Overfull \hbox (49.72473pt too wide) in paragraph at lines 873--873
+Overfull \hbox (49.72473pt too wide) in paragraph at lines 872--872
 \T1/lmr/m/n/12 tonomous Op-er-a-tion of Ad-vanced Re-ac-tors''. In: \T1/lmr/m/it/12 An-nals of Nu-clear En-ergy \T1/lmr/m/n/12 182. arXiv:2209.04334
  []
 
 [14] [15]
-Overfull \hbox (14.70702pt too wide) in paragraph at lines 873--873
+Overfull \hbox (14.70702pt too wide) in paragraph at lines 872--872
 \T1/lmtt/m/n/12 linkinghub . elsevier . com / retrieve / pii / 000510987090097X$[][] \T1/lmr/m/n/12 (vis-ited on 09/12/2025). 
  []
 
 [16]
-Overfull \hbox (8.58829pt too wide) in paragraph at lines 873--873
+Overfull \hbox (8.58829pt too wide) in paragraph at lines 872--872
 \T1/lmtt/m/n/12 13353$[][]\T1/lmr/m/n/12 . \T1/lmr/m/sc/12 url\T1/lmr/m/n/12 : [][]$\T1/lmtt/m/n/12 https : / / linkinghub . elsevier . com / retrieve / pii / S1093968726000137$[][]
  []
 
 
-Overfull \hbox (4.55821pt too wide) in paragraph at lines 873--873
+Overfull \hbox (4.55821pt too wide) in paragraph at lines 872--872
 \T1/lmr/m/n/12 cesses''. en. In: \T1/lmr/m/it/12 Math-e-mat-ics \T1/lmr/m/n/12 13.6, p. 961. \T1/lmr/m/sc/12 issn\T1/lmr/m/n/12 : 2227-7390. \T1/lmr/m/sc/12 doi\T1/lmr/m/n/12 : [][]$\T1/lmtt/m/n/12 10 . 3390 / math13060961$[][]\T1/lmr/m/n/12 .
  []
 
 
-Overfull \hbox (10.97284pt too wide) in paragraph at lines 873--873
+Overfull \hbox (10.97284pt too wide) in paragraph at lines 872--872
 \T1/lmr/m/it/12 Pro-ceed-ings of the 37th IEEE Con-fer-ence on De-ci-sion and Con-trol (Cat. No.98CH36171)\T1/lmr/m/n/12 .
  []
 
 [17] [18]
-Overfull \hbox (35.75075pt too wide) in paragraph at lines 873--873
+Overfull \hbox (35.75075pt too wide) in paragraph at lines 872--872
 [][]\T1/lmr/m/n/12 Yu, Don-gran et al. (June 2023). \T1/lmr/m/it/12 A Sur-vey on Neural-symbolic Learn-ing Sys-tems\T1/lmr/m/n/12 . arXiv:2111.08164
  []
 
@@ -839,7 +839,7 @@ Here is how much of TeX's memory you used:
  59 hyphenation exceptions out of 8191
  75i,13n,81p,5207b,1944s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texmf/fonts/type1/public/lm/lmbx10.pfb></usr/share/texmf/fonts/type1/public/lm/lmbx12.pfb></usr/share/texmf/fonts/type1/public/lm/lmcsc10.pfb></usr/share/texmf/fonts/type1/public/lm/lmex10.pfb></usr/share/texmf/fonts/type1/public/lm/lmmi12.pfb></usr/share/texmf/fonts/type1/public/lm/lmmi6.pfb></usr/share/texmf/fonts/type1/public/lm/lmmi8.pfb></usr/share/texmf/fonts/type1/public/lm/lmmib10.pfb></usr/share/texmf/fonts/type1/public/lm/lmr10.pfb></usr/share/texmf/fonts/type1/public/lm/lmr12.pfb></usr/share/texmf/fonts/type1/public/lm/lmr17.pfb></usr/share/texmf/fonts/type1/public/lm/lmr8.pfb></usr/share/texmf/fonts/type1/public/lm/lmri12.pfb></usr/share/texmf/fonts/type1/public/lm/lmsy10.pfb></usr/share/texmf/fonts/type1/public/lm/lmsy8.pfb></usr/share/texmf/fonts/type1/public/lm/lmtt12.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb>
-Output written on main.pdf (19 pages, 397630 bytes).
+Output written on main.pdf (19 pages, 397141 bytes).
 PDF statistics:
  720 PDF objects out of 1000 (max. 8388607)
  655 compressed objects within 7 object streams

@@ -33,8 +33,8 @@
 
 \author{
     Christon Nunes\textsuperscript{1} \and
-    Cade Coker\textsuperscript{2} \and
-    Craig Ramlal\textsuperscript{3}
+    Craig J. Ramlal\textsuperscript{2} \and
+    Cade Coker\textsuperscript{3}
 }
 
 \date{
@@ -48,7 +48,6 @@
 \begin{abstract}
 This paper presents the Unified Hierarchical Reasoning Controller (UHRC), a novel framework designed to enhance the reasoning capabilities of 
 artificial intelligence systems. The UHRC integrates hierarchical reasoning processes, allowing for more efficient and effective decision-making in complex environments. 
-We evaluate the performance of the UHRC through a series of experiments, demonstrating its superiority over traditional reasoning controllers in various tasks. 
 The results indicate that the UHRC can significantly improve the adaptability and robustness of AI systems, making it a promising approach for future research in artificial intelligence and machine learning.
 \end{abstract}
 
@@ -58,13 +57,13 @@ The results indicate that the UHRC can significantly improve the adaptability an
 The autonomous control of complex nonlinear systems remains one of the most
 consequential open problems in control engineering
 \parencite{iqbal_nonlinear_2017, liu_new_2015, daoutidis_future_2023}.
-Systems such as unmanned aerial vehicles (UAVs), autonomous ground vehicles,
+Systems such as unmanned aerial vehicles (UAVs), autonomous ground vehicles (UGVs),
 and high degree-of-freedom robotic manipulators are characterised by
 high dimensional state spaces, nonlinear inter-state couplings, actuator
 saturation, and significant parametric uncertainty
 \parencite{sadati_two-level_2015, ameli_robust_2021, iqbal_nonlinear_2017,
 slotine_applied_1991}.
-The fundamental difficulty is that the dynamical regimes governing long horizon
+The fundamental difficulties are that the dynamical regimes governing long horizon
 navigation and those governing fast stabilisation operate on incommensurable
 timescales, differ in their sensitivity to model error, and impose competing
 demands on the same actuator plant
@@ -170,7 +169,7 @@ module handling rapid, detailed computation, coupled through a shared carry
 state that enables adaptive allocation of computational depth.
 Trained on as few as 1{,}000 examples without pre-training or chain-of-thought
 supervision, the HRM achieves near perfect accuracy on complex Sudoku problems
-and optimal pathfinding in large mazes tasks on which state-of-the-art large
+and optimal pathfinding in large maze tasks on which state-of-the-art large
 language model approaches fail entirely \parencite{wang_hierarchical_2025,
 huang_towards_2023, feng_efficient_2025}.
 Crucially, the hierarchical role specialisation between modules emerges through
@@ -194,7 +193,7 @@ what either component achieves in isolation.
 Nevertheless, all demonstrated HRM applications to date have been confined to
 discrete, turn based domains.
 Whether the same unified reasoning mechanism can function as a closed loop
-controller for a continuous, real time nonlinear dynamical systems where
+controller for continuous, real time nonlinear dynamical systems where
 control outputs must be physically continuous, observations arrive as dense
 sensory streams, and temporal context must persist across thousands of control
 cycles remains entirely unexplored in the literature.

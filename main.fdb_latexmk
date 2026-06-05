@@ -1,14 +1,14 @@
 # Fdb version 4
-["biber main"] 0 "main.bcf" "main.bbl" "main" 1780689782.34743 -1
-  "main.bcf" 1780689782.17122 116299 fd604995a8afb6ed7da5dad48bf568c2 "pdflatex"
+["biber main"] 0 "main.bcf" "main.bbl" "main" 1780690902.53581 -1
+  "main.bcf" 1780690902.40332 116299 fd604995a8afb6ed7da5dad48bf568c2 "pdflatex"
   "references.bib" 1778368125.69304 285036 240fe7b643fac764f9e9fdfdd3966709 ""
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["pdflatex"] 1780689778.699 "/home/nunes/uhrc-paper/main.tex" "main.pdf" "main" 1780689782.34788 0
+["pdflatex"] 1780690899.42206 "/home/nunes/uhrc-paper/main.tex" "main.pdf" "main" 1780690902.5363 0
   "/etc/texmf/web2c/texmf.cnf" 1778252968.0548 475 c0e671620eb5563b2130f56340a5fde8 ""
-  "/home/nunes/uhrc-paper/main.tex" 1780689778.33002 44381 2b19ec8e246cdfde17ec78902470f788 ""
+  "/home/nunes/uhrc-paper/main.tex" 1780690892.19972 44230 e0af6939352e254bf3a8a773cbdb2f18 ""
   "/usr/share/texlive/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/jknappen/ec/ecrm1200.tfm" 1136768653 3584 f80ddd985bd00e29e9a6047ebd9d4781 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm" 1246382020 916 f87d7c45f9c908e672703b83b72241a3 ""
@@ -163,11 +163,11 @@
   "/usr/share/texmf/web2c/texmf.cnf" 1707919699 40399 f2c302f7d2af602abb742093540a5834 ""
   "/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map" 1778256516.54851 165012 f177baa1c39a3ebd62c3096a43521a0d ""
   "/var/lib/texmf/web2c/pdftex/pdflatex.fmt" 1778256543 6831103 278d0e058a4ac9556f209630a4001860 ""
-  "main.aux" 1780689782.13602 24881 ebd60f4079d68e495f53ddbdebcd48ed "pdflatex"
+  "main.aux" 1780690902.37692 24881 798acd4ad32c8ff854fbc72e0ffb3305 "pdflatex"
   "main.bbl" 1780503176.73263 252504 dc3deabdd4c2cadc602c38a739a015e8 "biber main"
-  "main.out" 1780689782.16242 3409 06ec491da05d79ff2b2d802cfc493e5a "pdflatex"
-  "main.run.xml" 1780689782.17562 2311 e66a0e3ff336a5af941c7fe634558519 "pdflatex"
-  "main.tex" 1780689778.33002 44381 2b19ec8e246cdfde17ec78902470f788 ""
+  "main.out" 1780690902.39892 3409 06ec491da05d79ff2b2d802cfc493e5a "pdflatex"
+  "main.run.xml" 1780690902.40332 2311 e66a0e3ff336a5af941c7fe634558519 "pdflatex"
+  "main.tex" 1780690892.19972 44230 e0af6939352e254bf3a8a773cbdb2f18 ""
   (generated)
   "main.aux"
   "main.bcf"
