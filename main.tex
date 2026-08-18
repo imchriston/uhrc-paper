@@ -12,12 +12,16 @@
 \usepackage{hyperref}        
 \usepackage{enumitem}
 %\usepackage{cite}             
+\usepackage{multirow}
+\usepackage{booktabs}   
 \usepackage{caption}          
 \usepackage{subcaption}        
 \usepackage{siunitx}           
 \usepackage{lineno}            
 \usepackage{setspace}        
 \usepackage[backend=biber, style=authoryear]{biblatex}
+\graphicspath{{figures/}}  
+
 \addbibresource{references.bib}    
 
 \hypersetup{
@@ -867,6 +871,586 @@ The primary performance metrics are root mean square error (RMSE) of the Euclide
 position error, integral absolute error (IAE), integral time-weighted absolute error
 (ITAE), path length ratio (PLR = actual path length / straight-line distance), episode
 success rate (goal reached within 0.5\,m without collision), and collision rate.
+
+
+\section{Results}
+\label{sec:results}
+
+This section presents quantitative and qualitative results for the UHRC and the
+classical hierarchical baseline across the five structured test cases (TC01--TC05).
+All metrics are computed over $N = 30$ Monte Carlo trials per scenario. RMSE and
+IAE are evaluated over the full 15\,s episode duration, including failed and
+divergent trials, so that aggregate statistics reflect operational reliability
+rather than selective best-case performance. Path length ratio (PLR) is defined as
+the ratio of actual path length travelled to the straight-line start-to-goal
+distance. Corrected units are used throughout: IAE has units of m\,s and ITAE has
+units of m\,s$^2$, consistent with integrating position error (m) over time (s).
+
+Table~\ref{tab:results_summary} presents the consolidated performance summary across
+all scenarios and both controllers.
+
+\begin{table*}[ht]
+\centering
+\caption{Performance summary across all test cases ($N = 30$ trials). Metrics are
+averaged over all trials including failures. Dashes indicate metrics not formally
+recorded in the original benchmark for that scenario. Classical controller success
+is 100\% for TC01--TC03 and TC05 based on all 30 trials reaching the goal without
+collision.}
+\label{tab:results_summary}
+\begin{tabular}{llccccc}
+\hline
+Controller & Scenario & Success (\%) & RMSE (m) & IAE (m\,s) & ITAE (m\,s$^2$) & PLR \\
+\hline
+\multirow{5}{*}{Classical}
+ & TC01      & 100.0 & 0.938  & 43.426  & 1120.854   & 2.090 \\
+ & TC02             & 100.0 & 0.6306    & ---     & ---        & 1.158 \\
+ & TC03  & 100.0 & 0.631  & 9.313   & 83.941     & 1.158 \\
+ & TC04     & 0.0   & ---    & ---     & ---        & ---   \\
+ & TC05     & 100.0 & 0.707  & 13.346  & 144.978    & 1.227 \\
+\hline
+\multirow{5}{*}{UHRC}
+ & TC01          & 6.7   & 67.040  & 834.442  & 8{,}492.619   & 18.74 \\
+ & TC02              & 3.3   & 45.476  & 529.126  & 5{,}327.170   & 12.82 \\
+ & TC03        & 3.3   & 48.413  & 564.749  & 5{,}649.172   & 10.60 \\
+ & TC04     & 0.0   & 106.123 & 1{,}282.070 & 13{,}461.145 & 16.16 \\
+ & TC05     & 13.3  & 58.675  & 706.468  & 73{,}011.560  & 14.71 \\
+\hline
+\end{tabular}
+\end{table*}
+
+
+\subsection{TC01: Open-Field Transit}
+\label{sec:tc01}
+
+
+TC01 establishes baseline goal-seeking performance in the absence of any obstacles.
+The classical controller achieved 100\% success across all 30 trials, with a mean
+RMSE of 0.938\,m and an IAE of 43.426\,m\,s. The residual tracking error is
+attributable to cumulative drift in the ICP odometry subsystem and the fixed-interval
+pose graph optimisation cycle: the INSEKF position estimator exhibited residual errors
+of 0.376\,m along $x$ and 0.265\,m along $y$ under square-trajectory validation,
+confirming that localisation noise propagates directly into the tracking error. The
+PLR of 2.090 reflects the pure-pursuit tracker's lookahead-induced lateral oscillations
+around the nominal straight-line path.
+
+The UHRC achieved a success rate of 6.7\% (2 of 30 trials) with a mean RMSE of
+67.040\,m and a PLR of 18.74. The extremely high RMSE and PLR values reflect possibly that the policy diverges away from the goal rather than colliding
+with obstacles, as confirmed by a timeout rate of 90\% of trials. The two successful
+trials shared a common characteristic, the initial goal distance was below
+approximately 7\,m, placing the goal within a range at which the learned policy
+converged to a stable goal-seeking attractor before the carry state had drifted
+out of distribution. On longer-range goals, prediction errors in the generated torques
+compound across successive timesteps, driving the vehicle into states the model has
+never encountered, and the absence of integral correction means no mechanism exists
+to recover from these accumulated deviations. Qualitative trajectories for both
+controllers are shown in Figures~\ref{fig:tc01_uhrc} and~\ref{fig:tc01_classical}.
+
+\begin{figure*}[ht]
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/tc01_uhrc.png}
+        \caption{UHRC trajectory (Success: 6.7\%, RMSE: 67.040\,m)}
+        \label{fig:tc01_uhrc}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/tc01_classical.png}
+        \caption{Classical trajectory (Success: 100\%, RMSE: 0.938\,m)}
+        \label{fig:tc01_classical}
+    \end{subfigure}
+    \caption{TC01 open-field transit trajectories. The UHRC diverges from the
+             goal in 90\% of trials while the classical controller converges
+             in all 30 trials.}
+    \label{fig:tc01}
+\end{figure*}
+
+\subsection{TC02: Symmetric Corridor Navigation}
+\label{sec:tc02}
+
+TC02 places six obstacles symmetrically around the nominal flight corridor, requiring
+the controller to plan and execute a collision-free traversal of a geometrically
+constrained environment. The classical controller achieved 100\% success with a PLR
+of 1.158, indicating the A* planner identified a valid path through the corridor
+in all trials. The modest PLR elevation above 1.0 reflects the 2.0\,m cell resolution
+of the occupancy grid, which prevents precise path placement in narrow passages and
+forces small detours. Formal RMSE and IAE metrics were not recorded for this scenario;
+trajectory plots are shown in Figure~\ref{fig:tc02_classical}.
+\begin{figure*}[ht]
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/tc02_uhrc.png}
+        \caption{UHRC trajectory (Success: 3.3\%, RMSE: 45.476\,m)}
+        \label{fig:tc02_uhrc}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/tc02_classical.png}
+        \caption{Classical trajectory (Success: 100\%, PLR: 1.158)}
+        \label{fig:tc02_classical}
+    \end{subfigure}
+    \caption{TC02 symmetric corridor trajectories.}
+    \label{fig:tc02}
+\end{figure*}
+
+
+
+The UHRC achieved a success rate of 3.3\% (1 of 30 trials), with a mean RMSE of
+45.476\,m, IAE of 529.126\,m\,s, and PLR of 12.82. Despite the low success rate,
+the single successful trajectory and several near-successes demonstrated qualitatively
+smoother clearance through the corridor than the classical controller, without the
+lateral waypoint-induced oscillations visible in Figure~\ref{fig:tc02_uhrc}. This
+is consistent with the information bottleneck hypothesis. The UHRC has direct access to
+the full obstacle geometry through its LiDAR observation, whereas the classical
+controller's low-level PID receives only waypoint references and has no representation
+of adjacent obstacle surfaces. The dominant failure mode remained the same
+divergence instability observed in TC01, confirming that the spatial reasoning
+capability is present in principle but is undermined by accumulated torque prediction
+error.
+
+
+
+\subsection{TC03: Gap Navigation}
+\label{sec:tc03}
+
+TC03 places two obstacles forming a 3\,m gap directly in the nominal flight path,
+testing the precision of gap identification and the control accuracy required to pass
+through without collision. The classical controller achieved 100\% success with a RMSE
+of 0.631\,m and a PLR of 1.158. A* identified the gap and generated a path through it
+in all trials; however, several trials exhibited near-miss events during gap transit,
+attributable to waypoint discretisation at the 2.0\,m grid resolution and the
+replanning latency at 10\,Hz, which together prevent precise path placement relative
+to obstacle surfaces.
+
+The UHRC achieved a success rate of 3.3\% with a mean RMSE of 48.413\,m and a PLR of
+10.60. The PLR is marginally lower than in TC01 and TC02, consistent with the
+observation that the presence of an obstacle structure near the flight path partially
+constrains the divergence geometry compared to the open-field case. The trajectory in
+Figure~\ref{fig:tc03_uhrc} shows that the UHRC's approach trajectory is smooth and
+accurately directed toward the gap, indicating that the H-module's velocity subgoal
+correctly encodes the gap as a navigable passage. The failure to complete the transit
+is again attributable to torque prediction errors during and after gap transit, which
+drive the vehicle into unstable attitude states.
+
+\begin{figure*}[ht]
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/tc03_uhrc.png}
+        \caption{UHRC trajectory (Success: 3.3\%, RMSE: 48.413\,m)}
+        \label{fig:tc03_uhrc}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/tc03_classical.png}
+        \caption{Classical trajectory (Success: 100\%, RMSE: 0.631\,m)}
+        \label{fig:tc03_classical}
+    \end{subfigure}
+    \caption{TC03 gap navigation trajectories. Both controllers direct
+             the vehicle toward the 3\,m gap.}
+    \label{fig:tc03}
+\end{figure*}
+
+
+\subsection{TC04: Dynamic Obstacle Avoidance}
+\label{sec:tc04}
+
+
+TC04 reveals the most architecturally significant result of the evaluation. Obstacles
+are hidden from both controllers' sensor streams until $t \geq 3.0$\,s, at which
+point they are revealed within the drone's active flight corridor. Both the classical
+controller and the pure UHRC recorded a 0\% success rate across all 30 trials, as
+shown in Figure~\ref{fig:tc04}.
+
+The classical controller's failure is structural, obstacle detection is contingent on
+the LiDAR scan being projected into the occupancy grid and a revised waypoint sequence
+being computed by A* and propagated to the pure-pursuit tracker. The pipeline
+introduces a latency between obstacle emergence and the availability of an updated
+reference trajectory. During this window the low-level PID continues executing the
+prior trajectory, and the collision occurs before replanning can redirect the vehicle,
+as the trajectory in Figure~\ref{fig:tc04_classical} confirms. This latency is
+inherent to the fixed supervisory-regulatory interface and is not addressable by
+tuning within the existing architecture.
+
+The UHRC's failure is attributable to the same policy instability that dominates all
+test cases: the drone diverges from the nominal path before reaching the obstacle
+rather than colliding with it, as shown in Figure~\ref{fig:tc04_uhrc}. Large erratic
+torque predictions arise immediately after carry initialisation, consistent with the
+policy encountering out-of-distribution states that compound before the obstacle is
+ever revealed at $t = 3.0$\,s. Crucially, however, in the trials where the UHRC
+remained on a coherent flight path until $t = 3.0$\,s, the 32-ray LiDAR scan
+immediately reflected the newly revealed obstacle returns, and the observation
+embedding was updated within the same H-L reasoning cycle. This architecture-level
+reactivity replanning latency bounded by a single 10\,ms inference call rather
+than a 100\,ms pipeline cycle represents the key structural advantage of unified
+reasoning over explicit hierarchical decomposition for dynamic scenarios, and
+motivates the 20\% success rate observed in the UHRC-PID hybrid variant reported
+separately.
+
+\begin{figure*}[ht]
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/tc04_uhrc.png}
+        \caption{UHRC trajectory (Success: 0\%, RMSE: 106.123\,m). The vehicle
+                 diverges from the nominal path before the obstacle is revealed
+                 at $t = 3.0$\,s.}
+        \label{fig:tc04_uhrc}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/tc04_classical.png}
+        \caption{Classical controller trajectory (Success: 0\%). The vehicle
+                 maintains the prior planned trajectory after obstacle revelation
+                 due to replanning pipeline latency, resulting in collision.}
+        \label{fig:tc04_classical}
+    \end{subfigure}
+    \caption{TC04 dynamic obstacle avoidance trajectories ($N = 30$ trials).
+             Both controllers achieve 0\% success.}
+    \label{fig:tc04}
+\end{figure*}
+
+
+\subsection{TC05: Parametric Robustness}
+\label{sec:tc05}
+TC05 applies simultaneous parametric perturbations to the plant dynamics (mass
+$\pm 20\%$, diagonal inertia $\pm 30\%$, drag coefficients $\pm 50\%$, thrust
+coefficient $k_T \pm 15\%$) over the TC02 corridor configuration. The two
+controllers exhibit contrasting responses that directly characterise the
+performance-robustness boundary between learned and classical architectures.
+
+The classical controller achieved 100\% success across all 30 perturbed trials with
+a mean RMSE of 0.707\,m, an IAE of 13.346\,m\,s, and a PLR of 1.227, as shown in
+Figure~\ref{fig:tc05_classical}. These metrics are comparable to the nominal TC01 and
+TC03 results, demonstrating bounded performance degradation under significant
+parametric variation. The thrust output under perturbed conditions (2814.94\,Nm) was elevated
+relative to the nominal TC01 baseline (5136.5\,Nm), consistent with the integral term
+actively compensating for reduced effective hover thrust.
+
+The UHRC achieved a success rate of 13.3\% (4 of 30 trials) under TC05 conditions,
+with a mean RMSE of 58.675\,m and an ITAE of 73{,}011.560\,m\,s$^2$. A direct
+comparison between the UHRC under nominal and perturbed conditions is shown in
+Figure~\ref{fig:tc05_uhrc_compare}: under nominal dynamics
+(Figure~\ref{fig:tc05_uhrc_nominal}) the policy executes a coherent straight-line
+transit, while under 20\% model uncertainty
+(Figure~\ref{fig:tc05_torque_uncertainty}) the trajectory deviates substantially from the
+intended path. The ITAE under TC05 is approximately $5\times$ larger than TC04,
+because the parametric perturbations cause torque prediction errors that accumulate
+and compound continuously over the full episode duration, producing large late-episode
+deviations weighted heavily by the ITAE time penalty.
+
+
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=0.5\columnwidth]{figures/tc05_classical.png}
+    \caption{Classical controller trajectory under parametric uncertainty (TC05,
+             Success: 100\%, RMSE: 0.707\,m).}
+    \label{fig:tc05_classical}
+\end{figure}
+
+\begin{figure*}[ht]
+    \centering
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/tc05_uhrc_nominal.png}
+        \caption{UHRC under nominal dynamics (100\% model certainty).}
+        \label{fig:tc05_uhrc_nominal}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/tc05_uhrc.png}
+        \caption{UHRC under perturbed dynamics (80\% model certainty).}
+        \label{fig:tc05_uhrc_perturbed}
+    \end{subfigure}
+    \caption{TC05 UHRC trajectory comparison between nominal and perturbed
+             plant dynamics.}
+    \label{fig:tc05_uhrc_compare}
+\end{figure*}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\columnwidth]{figures/tc05_torque_uncertainty.png}
+    \caption{UHRC total torque magnitude under 80\% model certainty (TC05).
+             }
+    \label{fig:tc05_torque_uncertainty}
+\end{figure}
+
+The torque magnitude output under perturbed conditions, shown in
+Figure~\ref{fig:tc05_torque_uncertainty}, exhibits high-frequency oscillation that is
+entirely absent under nominal dynamics, confirming that the L-module's implicit
+representation of the plant input-output relationship becomes inaccurate when the
+effective dynamics shift. The UHRC's recurrent carry provides no mechanism for online
+parameter adaptation, the carry states encode compressed representations of past
+observations and subgoals, not explicit physical model parameters. Prediction errors
+therefore compound irreversibly across successive timesteps with no corrective
+feedback equivalent to the PID integral term.
+
+The 13.3\% residual success rate, higher than the 0\% recorded in TC04, reflects
+the nature of the failure geometry rather than improved robustness. 
+
+
+
+\section{Discussion}
+\label{sec:discussion}
+
+
+The results across TC01--TC05 collectively reveal a clear and internally consistent
+picture. The UHRC's dominant failure mode is not a failure of spatial reasoning but
+a failure of policy stability, the vehicle diverges from its intended path due to
+compounding torque prediction errors, irrespective of whether obstacles are present.
+This distinction is critical for interpreting the comparative results fairly. The
+classical controller's failures, by contrast, are architecturally deterministic:
+the supervisory-regulatory interface introduces a replanning latency that is
+structurally irreducible without redesigning the pipeline. The two architectures
+therefore fail in qualitatively different ways that reveal complementary design
+boundaries rather than a simple performance ranking.
+
+
+\subsection{Policy Instability as the Dominant Failure Mode}
+\label{sec:discuss_instability}
+
+
+Across TC01, TC02, and TC03, success rates of 6.7\%, 3.3\%, and 3.3\% respectively
+confirm that the UHRC consistently fails to complete goal-directed navigation under
+nominal conditions. The mean RMSE values of 67.040\,m, 45.476\,m, and 48.413\,m
+are far in excess of the geometric scale of each task (start-to-goal distances of
+approximately 10--18\,m), confirming that the dominant failure is trajectory
+divergence rather than collision. This divergence originates from a
+distributional compounding problem, the behavioural cloning training objective
+minimises one-step prediction error, but at inference the model operates in a
+closed loop where every prediction error perturbs the state, causing the next
+observation to drift progressively further from the training distribution
+\cite{le_mero_survey_2022, block_is_2024}.
+
+The absence of an integral correction mechanism compounds this effect. The cascaded
+PID controller accumulates tracking error in the integrator state of each loop,
+providing a continuous restoring force that grows in proportion to the accumulated
+deviation. The UHRC has no equivalent mechanism. The carry state encodes a
+compressed representation of recent observations, but provides no signal that
+distinguishes a large persistent error from a sequence of transient deviations.
+Minor torque prediction errors therefore accumulate without bound until the vehicle
+enters states the policy has never encountered. The two-layer transformer in the
+L-module then operates in a regime where the input distribution has shifted
+entirely outside the training manifold, and the resulting torque commands drive
+further instability in a positive feedback loop.
+
+The short-range successes in TC01 (2 of 30 trials with goal distances below
+approximately 7\,m) confirm that the learned spatial reasoning is functionally
+correct when the episode terminates before compounding errors dominate. This is
+further supported by the qualitative trajectory evidence in TC02 and TC03, where
+the UHRC's approach trajectories are smooth and geometrically appropriate the
+H-module correctly identifies the corridor passage and the gap as navigable
+subgoals but the vehicle fails to maintain stability long enough to execute
+them. The conclusion is that the spatial planning component of the UHRC is
+working as intended, but the action generation component lacks the error
+correction properties needed for stable long-horizon closed-loop operation.
+
+
+\subsection{Information Bottleneck vs Policy Stability: TC02 and TC03}
+\label{sec:discuss_bottleneck}
+
+
+The theoretical motivation for the UHRC is the information bottleneck at the
+classical controller's supervisory-regulatory interface: the A* planner transmits
+only a waypoint sequence to the low-level PID, discarding all contextual
+information about obstacle proximity and local geometry \cite{kolchinsky_nonlinear_2019,
+abdelmaksoud_control_2020}. The TC02 and TC03 results provide partial empirical
+evidence for this hypothesis. In both cases the classical controller exhibits
+lateral oscillation around the planned path near obstacle surfaces, attributable
+to the pure-pursuit tracker consuming only positional waypoints and having no
+representation of adjacent obstacle clearance. The UHRC's single successful
+trajectories in these scenarios show qualitatively smoother clearance geometry,
+consistent with the unified observation vector providing the L-module with direct
+access to LiDAR returns during torque computation.
+
+However, this architectural advantage is entirely negated by policy instability
+in 97\% of trials. The information bottleneck hypothesis predicts that the UHRC
+should outperform the classical controller in constrained geometric environments.
+The results show instead that the UHRC cannot demonstrate this advantage because
+it fails to remain stable long enough for the spatial reasoning benefit to
+manifest. This does not invalidate the hypothesis, it establishes that
+resolving policy instability is a necessary precondition for testing it
+rigorously.
+
+
+\subsection{Architectural Failure Modes in TC04}
+\label{sec:discuss_tc04}
+
+
+TC04 is the only scenario in which both controllers record 0\% success, yet the
+causal mechanisms are entirely distinct. The classical controller fails because
+the fixed supervisory-regulatory interface cannot respond to dynamic obstacles
+faster than the A* replanning cycle permits. The 10\,Hz replanning rate and the
+ICP keyframe creation threshold of approximately one keyframe per 0.8\,m of travel
+introduce a latency window during which the prior waypoint sequence remains active.
+This latency is not a consequence of poor tuning but of the fixed information
+pathway: the low-level PID has no access to sensor data and therefore cannot
+initiate avoidance until a revised waypoint sequence arrives from the supervisory
+layer \cite{li_hierarchical_2023, zhu_hierarchical_2024}.
+
+The UHRC fails for the unrelated reason of pre-existing policy instability, but
+the architectural analysis of its behaviour during coherent trials is informative.
+In those trials where the vehicle remained on a stable path until $t = 3.0$\,s,
+the LiDAR observation was updated within the same 10\,ms inference cycle as the
+obstacle revelation, and the observation embedding reflected the new obstacle
+geometry immediately in the next H-L reasoning cycle. This is structurally
+impossible for the classical controller regardless of tuning. The UHRC-PID hybrid
+architecture in which the UHRC generates attitude references consumed by the
+inner PID attitude loops achieved a 20\% success rate on TC04 in supplementary
+evaluation, providing direct empirical evidence that the UHRC's reactive spatial
+reasoning is functionally present when the action generation instability is
+decoupled from the trajectory generation task. This result motivates the hybrid
+architecture as the more immediately viable path toward deployment.
+
+
+\subsection{Distributional Fragility vs Integral Robustness: TC05}
+\label{sec:discuss_robustness}
+
+
+TC05 most directly characterises the fundamental trade-off between the two
+architectures. The classical controller's 100\% success rate under simultaneous
+perturbations of mass ($\pm 20\%$), inertia ($\pm 30\%$), drag ($\pm 50\%$),
+and thrust coefficient ($\pm 15\%$) demonstrates that integral feedback is a
+principled and highly effective mechanism for parametric robustness. The
+deviations in effective plant dynamics are treated as persistent disturbances
+by the PID integrators and compensated continuously, without any requirement
+for the controller to have knowledge of the perturbation magnitude or structure.
+This robustness is architecturally guaranteed, it follows from the stability
+analysis of the cascaded PID structure under the small-signal linearisation
+used for gain selection, and does not depend on the specific perturbation
+values applied.
+
+The UHRC's 13.3\% success rate under TC05 and its elevated ITAE of
+73{,}011.560\,m\,s$^2$ approximately $5\times$ larger than the next worst
+scenario confirm that parametric uncertainty is the most damaging
+distributional shift the policy encounters. Behavioural cloning on a single
+nominal dynamic model produces a policy whose implicit representation of the
+plant input-output relationship is calibrated exclusively to the nominal
+parameter set \cite{le_mero_survey_2022}. When the effective dynamics deviate,
+the L-module's torque predictions become systematically biased, and the
+recurrent carry which encodes compressed representations of past observations
+and subgoals rather than explicit physical model parameters provides no
+mechanism for detecting and compensating the shift. The high-frequency torque
+oscillation observed in Figure~\ref{fig:tc05_torque_uncertainty} is the
+behavioural signature of this mismatch. The model generates rapid corrective
+torques in response to observation errors produced by the biased dynamics,
+which themselves produce further observation errors in a destabilising cycle.
+
+The comparative results across TC01--TC05 therefore establish a clear
+performance-robustness boundary. The UHRC offers reactive spatial reasoning,
+fixed and bounded inference cost independent of mission duration, and a unified
+architecture that eliminates manual interface design. The classical controller
+provides formal stability guarantees, interpretable failure modes, integral
+disturbance rejection, and robustness to significant parametric variation
+without retraining. The UHRC's advantages in spatial reactivity are currently
+negated by policy instability attributable to the limitations of offline
+behavioural cloning from a single nominal expert. Closing this gap is a
+question of training methodology rather than architecture.
+
+
+\subsection{Implications for Future Development}
+\label{sec:discuss_future}
+
+
+Three targeted interventions follow directly from the failure analysis above.
+
+\textbf{Domain randomisation.} Training on a distribution of dynamic models rather
+than a single nominal plant is the most direct remedy for the distributional
+fragility demonstrated in TC05. Randomising mass, inertia, drag, and thrust
+coefficients across episodes during data generation would expose the behavioural
+cloning objective to the same perturbation regime applied at evaluation, allowing
+the L-module to learn torque predictions that are robust to parametric variation
+\cite{block_is_2024}. This requires no architectural change and is implementable
+within the existing training pipeline.
+
+\textbf{Reinforcement learning fine-tuning.} The compounding error instability
+in TC01--TC03 is a known failure mode of pure behavioural cloning that RL
+fine-tuning specifically addresses \cite{almahamid_reinforcement_2021}. Initialising
+from the behaviourally cloned policy and applying a shaped reward signal that
+penalises trajectory divergence would allow the policy to discover corrective
+strategies that the offline expert data does not contain. The UHRC's transformer
+architecture is differentiable end-to-end and compatible with policy gradient
+methods.
+
+\textbf{UHRC-PID hybrid deployment.} The 20\% TC04 success rate of the
+UHRC-PID hybrid architecture, compared to 0\% for both pure architectures,
+is a significant result of this investigation. In the
+hybrid, the UHRC generates attitude references consumed by the inner PID
+loops, confining the consequences of torque prediction error to a slower
+timescale where the attitude PID provides a stabilising correction. This
+architecture inherits the formal stability guarantee of the inner loop while
+retaining the UHRC's reactive spatial planning advantages, and represents
+the most viable near-term path toward deployment.
+
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+
+This paper presented the Unified Hierarchical Reasoning Controller (UHRC), the
+first systematic application of the Hierarchical Reasoning Model (HRM) architecture
+to a continuous nonlinear closed-loop control system. The UHRC was implemented as a
+two-level recurrent transformer in which a high-level module generates body-frame
+velocity subgoals and a low-level module translates those subgoals into body wrench
+commands, trained via behavioural cloning on 500 A*-guided expert episodes. A
+persistent 16-slot rolling carry buffer, RoPE positional encoding, and a gated
+subgoal injection mechanism were introduced as principled adaptations of the
+discrete HRM architecture to the requirements of continuous real-time control.
+
+The comparative evaluation against a classical SLAM-augmented cascaded PID baseline
+across five structured test cases produced four principal findings.
+
+First, the HRM architecture can learn a functional continuous control policy. The
+UHRC successfully navigates to the goal in short-range trials across all scenarios,
+and its approach trajectories in constrained environments (TC02, TC03) demonstrate
+geometrically appropriate obstacle-aware subgoal generation. This constitutes the
+first empirical demonstration of HRM-based closed-loop control of a nonlinear
+dynamic system.
+
+Second, policy instability attributable to behavioural cloning's compounding error
+limitation is the primary obstacle to reliable deployment. The UHRC's mean success
+rate across TC01--TC03 is 4.4\%, with trajectory divergence rather than collision
+as the dominant failure mode in over 90\% of trials. This is a training
+methodology limitation, not an architectural one.
+
+Third, the two architectures fail in qualitatively distinct ways that reveal
+complementary design boundaries. The classical controller's 0\% success rate on
+TC04 is caused by a structurally irreducible replanning latency at the fixed
+supervisory-regulatory interface. The UHRC's 0\% rate on the same scenario is
+caused by pre-existing policy instability that prevents the vehicle from remaining
+stable long enough to encounter the dynamic obstacle. The UHRC-PID hybrid achieved
+20\% success on TC04, providing direct evidence that the UHRC's reactive spatial
+reasoning is functionally present when action generation instability is externally
+stabilised.
+
+Fourth, the performance-robustness trade-off between unified learned hierarchy and
+classical explicit decomposition is architectural in origin. The classical
+controller's integral feedback provides guaranteed parametric robustness without
+retraining; the UHRC's behavioural cloning objective calibrates the policy
+exclusively to the nominal plant, making it fragile to distributional shift.
+The 13.3\% success rate and ITAE of 73{,}011.560\,m\,s$^2$ under TC05
+parametric perturbations, compared to 100\% success and ITAE of 144.978\,m\,s$^2$
+for the classical controller, quantify this boundary precisely.
+
+The primary direction for future work is domain randomisation during training,
+which directly addresses distributional fragility without architectural modification.
+Reinforcement learning fine-tuning from the behaviourally cloned initialisation
+would address compounding error instability by allowing the policy to discover
+corrective strategies absent from the offline expert. The UHRC-PID hybrid
+architecture, which decouples spatial reasoning from action generation stabilisation,
+represents the most viable near-term path toward operational deployment and warrants
+systematic evaluation across the full test case suite. Beyond these immediate
+extensions, the UHRC framework provides a principled foundation for investigating
+whether unified hierarchical reasoning can match or exceed the performance of
+explicit architectural decomposition once the training methodology limitations are
+resolved a question this investigation has framed precisely but not yet answered.
 
 \printbibliography
 
