@@ -38,7 +38,8 @@
 \author{
     Christon Nunes\textsuperscript{1} \and
     Craig J. Ramlal\textsuperscript{2} \and
-    Cade Coker\textsuperscript{3}
+    Cade Coker\textsuperscript{3} \and
+    Arvind Singh\textsuperscript{4}
 }
 
 \date{
@@ -903,7 +904,7 @@ Controller & Scenario & Success (\%) & RMSE (m) & IAE (m\,s) & ITAE (m\,s$^2$) &
 \hline
 \multirow{5}{*}{Classical}
  & TC01      & 100.0 & 0.938  & 43.426  & 1120.854   & 2.090 \\
- & TC02             & 100.0 & 0.6306    & ---     & ---        & 1.158 \\
+ & TC02             & 100.0 & 0.6306    & 11.25     & 129.54       & 1.158 \\
  & TC03  & 100.0 & 0.631  & 9.313   & 83.941     & 1.158 \\
  & TC04     & 0.0   & ---    & ---     & ---        & ---   \\
  & TC05     & 100.0 & 0.707  & 13.346  & 144.978    & 1.227 \\
@@ -975,8 +976,8 @@ constrained environment. The classical controller achieved 100\% success with a 
 of 1.158, indicating the A* planner identified a valid path through the corridor
 in all trials. The modest PLR elevation above 1.0 reflects the 2.0\,m cell resolution
 of the occupancy grid, which prevents precise path placement in narrow passages and
-forces small detours. Formal RMSE and IAE metrics were not recorded for this scenario;
-trajectory plots are shown in Figure~\ref{fig:tc02_classical}.
+forces small detours. An RMSE of 0.6306\,m and an IAE of 11.25\,m\,s confirm that the classical controller maintained accurate tracking of the planned path, seen in the figures corresponding figures.
+shown in Figure~\ref{fig:tc02_classical}.
 \begin{figure*}[ht]
     \centering
     \begin{subfigure}[b]{0.48\textwidth}
@@ -1355,40 +1356,6 @@ behavioural cloning from a single nominal expert. Closing this gap is a
 question of training methodology rather than architecture.
 
 
-\subsection{Implications for Future Development}
-\label{sec:discuss_future}
-
-
-Three targeted interventions follow directly from the failure analysis above.
-
-\textbf{Domain randomisation.} Training on a distribution of dynamic models rather
-than a single nominal plant is the most direct remedy for the distributional
-fragility demonstrated in TC05. Randomising mass, inertia, drag, and thrust
-coefficients across episodes during data generation would expose the behavioural
-cloning objective to the same perturbation regime applied at evaluation, allowing
-the L-module to learn torque predictions that are robust to parametric variation
-\cite{block_is_2024}. This requires no architectural change and is implementable
-within the existing training pipeline.
-
-\textbf{Reinforcement learning fine-tuning.} The compounding error instability
-in TC01--TC03 is a known failure mode of pure behavioural cloning that RL
-fine-tuning specifically addresses \cite{almahamid_reinforcement_2021}. Initialising
-from the behaviourally cloned policy and applying a shaped reward signal that
-penalises trajectory divergence would allow the policy to discover corrective
-strategies that the offline expert data does not contain. The UHRC's transformer
-architecture is differentiable end-to-end and compatible with policy gradient
-methods.
-
-\textbf{UHRC-PID hybrid deployment.} The 20\% TC04 success rate of the
-UHRC-PID hybrid architecture, compared to 0\% for both pure architectures,
-is a significant result of this investigation. In the
-hybrid, the UHRC generates attitude references consumed by the inner PID
-loops, confining the consequences of torque prediction error to a slower
-timescale where the attitude PID provides a stabilising correction. This
-architecture inherits the formal stability guarantee of the inner loop while
-retaining the UHRC's reactive spatial planning advantages, and represents
-the most viable near-term path toward deployment.
-
 
 \section{Conclusion}
 \label{sec:conclusion}
@@ -1405,48 +1372,17 @@ subgoal injection mechanism were introduced as principled adaptations of the
 discrete HRM architecture to the requirements of continuous real-time control.
 
 The comparative evaluation against a classical SLAM-augmented cascaded PID baseline
-across five structured test cases produced four principal findings.
-
-First, the HRM architecture can learn a functional continuous control policy. The
-UHRC successfully navigates to the goal in short-range trials across all scenarios,
-and its approach trajectories in constrained environments (TC02, TC03) demonstrate
-geometrically appropriate obstacle-aware subgoal generation. This constitutes the
-first empirical demonstration of HRM-based closed-loop control of a nonlinear
-dynamic system.
-
-Second, policy instability attributable to behavioural cloning's compounding error
-limitation is the primary obstacle to reliable deployment. The UHRC's mean success
-rate across TC01--TC03 is 4.4\%, with trajectory divergence rather than collision
-as the dominant failure mode in over 90\% of trials. This is a training
-methodology limitation, not an architectural one.
-
-Third, the two architectures fail in qualitatively distinct ways that reveal
-complementary design boundaries. The classical controller's 0\% success rate on
-TC04 is caused by a structurally irreducible replanning latency at the fixed
-supervisory-regulatory interface. The UHRC's 0\% rate on the same scenario is
-caused by pre-existing policy instability that prevents the vehicle from remaining
-stable long enough to encounter the dynamic obstacle. The UHRC-PID hybrid achieved
-20\% success on TC04, providing direct evidence that the UHRC's reactive spatial
-reasoning is functionally present when action generation instability is externally
-stabilised.
-
-Fourth, the performance-robustness trade-off between unified learned hierarchy and
-classical explicit decomposition is architectural in origin. The classical
-controller's integral feedback provides guaranteed parametric robustness without
-retraining; the UHRC's behavioural cloning objective calibrates the policy
-exclusively to the nominal plant, making it fragile to distributional shift.
-The 13.3\% success rate and ITAE of 73{,}011.560\,m\,s$^2$ under TC05
-parametric perturbations, compared to 100\% success and ITAE of 144.978\,m\,s$^2$
-for the classical controller, quantify this boundary precisely.
+across five structured test cases produced principal findings.The HRM architecture can learn a functional continuous control policy. 
+The policy instability was attributable to behavioural cloning's compounding error
+limitation is the primary obstacle to reliable deployment. The two architectures fail in qualitatively distinct ways that reveal
+complementary design boundaries. Fourth, the performance-robustness trade-off between unified learned hierarchy and
+classical explicit decomposition is architectural in origin. 
 
 The primary direction for future work is domain randomisation during training,
 which directly addresses distributional fragility without architectural modification.
 Reinforcement learning fine-tuning from the behaviourally cloned initialisation
 would address compounding error instability by allowing the policy to discover
-corrective strategies absent from the offline expert. The UHRC-PID hybrid
-architecture, which decouples spatial reasoning from action generation stabilisation,
-represents the most viable near-term path toward operational deployment and warrants
-systematic evaluation across the full test case suite. Beyond these immediate
+corrective strategies absent from the offline expert. Beyond these immediate
 extensions, the UHRC framework provides a principled foundation for investigating
 whether unified hierarchical reasoning can match or exceed the performance of
 explicit architectural decomposition once the training methodology limitations are

@@ -1,14 +1,14 @@
 # Fdb version 4
-["biber main"] 1785102642.44137 "main.bcf" "main.bbl" "main" 1787078707.38429 0
-  "main.bcf" 1787078707.26837 116986 d9d26c5d10e61971fe84376bb2ee0b2d "pdflatex"
+["biber main"] 1787707246.98596 "main.bcf" "main.bbl" "main" 1787707582.51775 0
+  "main.bcf" 1787707582.35489 116833 87ad9c53ba2548547cb60e5b806bc596 "pdflatex"
   "references.bib" 1778368125.69304 285036 240fe7b643fac764f9e9fdfdd3966709 ""
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["pdflatex"] 1787078703.53846 "/home/nunes/uhrc-paper/main.tex" "main.pdf" "main" 1787078707.38468 0
+["pdflatex"] 1787707579.03844 "/home/nunes/uhrc-paper/main.tex" "main.pdf" "main" 1787707582.51859 0
   "/etc/texmf/web2c/texmf.cnf" 1778252968.0548 475 c0e671620eb5563b2130f56340a5fde8 ""
-  "/home/nunes/uhrc-paper/main.tex" 1787078695.38391 76078 06ac8f509b7f1d1c54e283d3413b4518 ""
+  "/home/nunes/uhrc-paper/main.tex" 1787707578.80651 72423 f8d7a00e5e43f0755851d7752c7ff493 ""
   "/usr/share/texlive/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/jknappen/ec/ecrm1200.tfm" 1136768653 3584 f80ddd985bd00e29e9a6047ebd9d4781 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm" 1246382020 916 f87d7c45f9c908e672703b83b72241a3 ""
@@ -178,11 +178,11 @@
   "figures/tc05_torque_uncertainty.png" 1784749088.83812 200977 a7f9101adfb8b21a67d864cf4ba25c46 ""
   "figures/tc05_uhrc.png" 1783112621.79621 114677 d02c2ee66c7dbbd1cd4af1a9575fdf75 ""
   "figures/tc05_uhrc_nominal.png" 1784751892.98751 18396 989113f143d2970501e11785747864a3 ""
-  "main.aux" 1787078707.25152 34708 78b14dad3df2a1d0a6240e76146d0a75 "pdflatex"
-  "main.bbl" 1785102646.86705 252504 dc3deabdd4c2cadc602c38a739a015e8 "biber main"
-  "main.out" 1787078707.26837 6192 8ec3d46b15928f4f289555315a6a2a49 "pdflatex"
-  "main.run.xml" 1787078707.27258 2311 e66a0e3ff336a5af941c7fe634558519 "pdflatex"
-  "main.tex" 1787078695.38391 76078 06ac8f509b7f1d1c54e283d3413b4518 ""
+  "main.aux" 1787707582.33452 34259 c30924437f8d24030dd5bca5862bfd30 "pdflatex"
+  "main.bbl" 1787707249.66843 252504 dc3deabdd4c2cadc602c38a739a015e8 "biber main"
+  "main.out" 1787707582.35489 5950 47bd4da6365e126c1bfe2b4dfc71cd92 "pdflatex"
+  "main.run.xml" 1787707582.35896 2311 e66a0e3ff336a5af941c7fe634558519 "pdflatex"
+  "main.tex" 1787707578.80651 72423 f8d7a00e5e43f0755851d7752c7ff493 ""
   (generated)
   "main.aux"
   "main.bcf"

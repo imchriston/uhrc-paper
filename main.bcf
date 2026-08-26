@@ -2481,8 +2481,6 @@
     <bcf:citekey order="53" intorder="1">li_hierarchical_2023</bcf:citekey>
     <bcf:citekey order="53" intorder="2">zhu_hierarchical_2024</bcf:citekey>
     <bcf:citekey order="54" intorder="1">le_mero_survey_2022</bcf:citekey>
-    <bcf:citekey order="55" intorder="1">block_is_2024</bcf:citekey>
-    <bcf:citekey order="56" intorder="1">almahamid_reinforcement_2021</bcf:citekey>
   </bcf:section>
   <!-- SORTING TEMPLATES -->
   <bcf:sortingtemplate name="nyt">
