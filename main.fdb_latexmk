@@ -1,14 +1,14 @@
 # Fdb version 4
-["biber main"] 1787707246.98596 "main.bcf" "main.bbl" "main" 1787707582.51775 0
-  "main.bcf" 1787707582.35489 116833 87ad9c53ba2548547cb60e5b806bc596 "pdflatex"
+["biber main"] 1788891728.30907 "main.bcf" "main.bbl" "main" 1788916335.99169 0
+  "main.bcf" 1788916335.85809 116757 1f13a33725fe6b7634088dac1bb21200 "pdflatex"
   "references.bib" 1778368125.69304 285036 240fe7b643fac764f9e9fdfdd3966709 ""
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["pdflatex"] 1787707579.03844 "/home/nunes/uhrc-paper/main.tex" "main.pdf" "main" 1787707582.51859 0
+["pdflatex"] 1788916332.4119 "/home/nunes/uhrc-paper/main.tex" "main.pdf" "main" 1788916335.99223 0
   "/etc/texmf/web2c/texmf.cnf" 1778252968.0548 475 c0e671620eb5563b2130f56340a5fde8 ""
-  "/home/nunes/uhrc-paper/main.tex" 1787707578.80651 72423 f8d7a00e5e43f0755851d7752c7ff493 ""
+  "/home/nunes/uhrc-paper/main.tex" 1788916332.08729 70193 6711bffbb7d1f085027d0ee693453d1c ""
   "/usr/share/texlive/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/jknappen/ec/ecrm1200.tfm" 1136768653 3584 f80ddd985bd00e29e9a6047ebd9d4781 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm" 1246382020 916 f87d7c45f9c908e672703b83b72241a3 ""
@@ -167,22 +167,22 @@
   "/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map" 1778256516.54851 165012 f177baa1c39a3ebd62c3096a43521a0d ""
   "/var/lib/texmf/web2c/pdftex/pdflatex.fmt" 1778256543 6831103 278d0e058a4ac9556f209630a4001860 ""
   "figures/tc01_classical.png" 1783112621.13501 48912 675e1374dbda3ac22175c30ae00728d2 ""
-  "figures/tc01_uhrc.png" 1783112621.34137 72717 dd3b9f79584808da7c088b01eca4fc0d ""
+  "figures/tc01_uhrc-pid.png" 1788788152.28436 91015 2d947bfc5123381f967b3b8c8906d80c ""
   "figures/tc02_classical.png" 1783112621.4635 57507 64a753daeaf37ef402ab88e5d491e041 ""
-  "figures/tc02_uhrc.png" 1783112635.02744 121459 10b1ad27e7cb22a2a5fc6acc241e5d4e ""
+  "figures/tc02_uhrc-pid.png" 1788789028.03908 134372 ca7f1920414b40361d796a636141ac27 ""
   "figures/tc03_classical.png" 1783112635.1571 55768 916691a10c9be6292b4256a8bfbacdd9 ""
-  "figures/tc03_uhrc.png" 1783112634.73466 156636 d2b8044b056fd511161ada6e1360c99c ""
+  "figures/tc03_uhrc-pid.png" 1788789580.87182 139792 e6457473e17a46d54a8a428c4069761b ""
   "figures/tc04_classical.png" 1783112634.8685 55665 5d2bd298faee24a6a933134e0accf4ca ""
-  "figures/tc04_uhrc.png" 1783112621.60248 139522 2bb77fd7b6638429cd510077ffa126ee ""
+  "figures/tc04_uhrc-pid.png" 1788789920.99635 143576 afbff9a70cce324f15caa8116f87fd1c ""
   "figures/tc05_classical.png" 1783112621.71619 55116 19796cd01217bfa738f88129e7592884 ""
-  "figures/tc05_torque_uncertainty.png" 1784749088.83812 200977 a7f9101adfb8b21a67d864cf4ba25c46 ""
-  "figures/tc05_uhrc.png" 1783112621.79621 114677 d02c2ee66c7dbbd1cd4af1a9575fdf75 ""
+  "figures/tc05_uhrc-pid_perturbed.png" 1788889482.31161 86611 49b370fe933be48b26397cc8cdb468fb ""
+  "figures/tc05_uhrc-pid_torque.png" 1788889503.38648 147199 f08ea6e95212bc2430b6136b7ac87a0a ""
   "figures/tc05_uhrc_nominal.png" 1784751892.98751 18396 989113f143d2970501e11785747864a3 ""
-  "main.aux" 1787707582.33452 34259 c30924437f8d24030dd5bca5862bfd30 "pdflatex"
-  "main.bbl" 1787707249.66843 252504 dc3deabdd4c2cadc602c38a739a015e8 "biber main"
-  "main.out" 1787707582.35489 5950 47bd4da6365e126c1bfe2b4dfc71cd92 "pdflatex"
-  "main.run.xml" 1787707582.35896 2311 e66a0e3ff336a5af941c7fe634558519 "pdflatex"
-  "main.tex" 1787707578.80651 72423 f8d7a00e5e43f0755851d7752c7ff493 ""
+  "main.aux" 1788916335.84489 34437 f709d50029a03cb5aad5bca10f4713d6 "pdflatex"
+  "main.bbl" 1788891731.62745 252504 dc3deabdd4c2cadc602c38a739a015e8 "biber main"
+  "main.out" 1788916335.85809 6274 a0f2908d2858fd87caa4ce59e6ea28df "pdflatex"
+  "main.run.xml" 1788916335.86249 2311 e66a0e3ff336a5af941c7fe634558519 "pdflatex"
+  "main.tex" 1788916332.08729 70193 6711bffbb7d1f085027d0ee693453d1c ""
   (generated)
   "main.aux"
   "main.bcf"
