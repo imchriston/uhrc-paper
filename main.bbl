@@ -1742,6 +1742,37 @@
       \endverb
       \keyw{notion,decoupled planning,hierarchical reasoning model,HRM,HRM framework}
     \endentry
+    \entry{khalil_nonlinear_2002}{book}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=c687708249e29c8fa3d8d0c0ff1612f9}{%
+           family={Khalil},
+           familyi={K\bibinitperiod},
+           given={Hassan\bibnamedelima K.},
+           giveni={H\bibinitperiod\bibinitdelim K\bibinitperiod},
+           givenun=0}}%
+      }
+      \list{location}{1}{%
+        {Upper Saddle River, NJ}%
+      }
+      \list{publisher}{1}{%
+        {Prentice Hall}%
+      }
+      \strng{namehash}{c687708249e29c8fa3d8d0c0ff1612f9}
+      \strng{fullhash}{c687708249e29c8fa3d8d0c0ff1612f9}
+      \strng{bibnamehash}{c687708249e29c8fa3d8d0c0ff1612f9}
+      \strng{authorbibnamehash}{c687708249e29c8fa3d8d0c0ff1612f9}
+      \strng{authornamehash}{c687708249e29c8fa3d8d0c0ff1612f9}
+      \strng{authorfullhash}{c687708249e29c8fa3d8d0c0ff1612f9}
+      \field{sortinit}{K}
+      \field{sortinithash}{c02bf6bff1c488450c352b40f5d853ab}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{edition}{3}
+      \field{title}{Nonlinear Systems}
+      \field{year}{2002}
+    \endentry
     \entry{kiran_deep_2022}{article}{}
       \name{author}{7}{}{%
         {{un=0,uniquepart=base,hash=1542a3b558f4361e4d5405e5f108accc}{%
@@ -4153,6 +4184,38 @@
       \field{title}{Applied nonlinear control}
       \field{year}{1991}
       \keyw{notion,Nonlinear control theory}
+    \endentry
+    \entry{sontag_smooth_1989}{article}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=7feb6b8c21c43545012178b1bdb5ac6d}{%
+           family={Sontag},
+           familyi={S\bibinitperiod},
+           given={Eduardo\bibnamedelima D.},
+           giveni={E\bibinitperiod\bibinitdelim D\bibinitperiod},
+           givenun=0}}%
+      }
+      \strng{namehash}{7feb6b8c21c43545012178b1bdb5ac6d}
+      \strng{fullhash}{7feb6b8c21c43545012178b1bdb5ac6d}
+      \strng{bibnamehash}{7feb6b8c21c43545012178b1bdb5ac6d}
+      \strng{authorbibnamehash}{7feb6b8c21c43545012178b1bdb5ac6d}
+      \strng{authornamehash}{7feb6b8c21c43545012178b1bdb5ac6d}
+      \strng{authorfullhash}{7feb6b8c21c43545012178b1bdb5ac6d}
+      \field{sortinit}{S}
+      \field{sortinithash}{b164b07b29984b41daf1e85279fbc5ab}
+      \field{extradatescope}{labelyear}
+      \field{labeldatesource}{}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{IEEE Transactions on Automatic Control}
+      \field{number}{4}
+      \field{title}{Smooth Stabilization Implies Coprime Factorization}
+      \field{volume}{34}
+      \field{year}{1989}
+      \field{pages}{435\bibrangedash 443}
+      \range{pages}{9}
+      \verb{doi}
+      \verb 10.1109/9.28018
+      \endverb
     \endentry
     \entry{tang_fuzzy_2024}{article}{}
       \name{author}{2}{}{%
