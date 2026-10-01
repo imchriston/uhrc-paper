@@ -447,7 +447,7 @@ The UHRC maps the 45-dimensional body-frame observation $\mathbf{o}$ to a comman
 \end{equation}
 The yaw reference is explicitly excluded ($\psi_{\mathrm{ref}} = 0$) because the body-frame observations are heading-invariant and the expert policy strictly commands zero yaw during transit. Furthermore, the hover thrust bias is initialized to $0.0$, as the model directly predicts angular deviations rather than thrust forces.
 
-This attitude intent is subsequently passed to a classical inner-loop Proportional-Integral-Derivative (PID) regulator. The inner loop computes the necessary body wrench $\mathbf{u} = [T, \tau_x, \tau_y, \tau_z]^{\top}$ to track the UHRC's commanded roll and pitch, while simultaneously regulating altitude and yaw:
+This attitude intent is subsequently passed to a classical inner-loop PID regulator. The inner loop computes the necessary body wrench $\mathbf{u} = [T, \tau_x, \tau_y, \tau_z]^{\top}$ to track the UHRC's commanded roll and pitch, while simultaneously regulating altitude and yaw:
 \begin{equation}
     \tau_i(t) = K_{p,i} e_i(t) + K_{i,i} \int_{0}^{t} e_i(\tau) d\tau + K_{d,i} \frac{d e_i(t)}{dt}, \quad i \in \{\phi, \theta\}
 \end{equation}
@@ -462,7 +462,7 @@ By confining the neural network to the outer loop, the UHRC effectively bypasses
 All observations are expressed in the body frame $\mathcal{B}$. This choice renders
 the observation invariant to global heading and position, reducing the domain of the
 mapping the controller must learn: an identical avoidance manoeuvre is appropriate
-regardless of the vehicle's absolute world-frame orientation \cite{liang_nonlinear_2018}.
+regardless of the vehicle's absolute world-frame orientation \parencite{liang_nonlinear_2018}.
 The 45-dimensional observation vector is
 
 \begin{equation}
@@ -478,9 +478,9 @@ The 45-dimensional observation vector is
     \in \mathbb{R}^{45},
     \label{eq:obs}
 \end{equation}
-where $\mathbf{v}_B = R_{BI}\mathbf{v}_I$ is the body-frame translational velocity,
+where $\mathbf{v}_B = R_{BI}\mathbf, {v}_I$ is the body-frame translational velocity,
 $\boldsymbol{\omega}_B$ is the angular velocity, $\mathbf{g}_B = R_{BI}[0, 0, -g]^{\top}$
-encodes attitude implicitly by projecting the gravity vector into $\mathcal{B}$,
+isthe gravity vector,
 $\Delta\mathbf{r}_B = R_{BI}(\mathbf{r}_{\mathrm{goal}} - \mathbf{r}_I)$ is the
 goal displacement clipped to a maximum range $r_{\max}^{\mathrm{goal}} = 20$\,m,
 $d_{\mathrm{norm}} = \min(\|\Delta\mathbf{r}_B\|, 20) / 20$ is the normalised
@@ -559,8 +559,7 @@ rotary frequencies are
 \begin{equation}
     \theta_i = \frac{1}{10000^{2i/d_h}}, \quad i = 0, 1, \ldots, d_h/2 - 1,
 \end{equation}
-with cosine and sine tables precomputed up to the maximum sequence length of
-$T_{\max} = \mathrm{carry\_len} + 1 = 17$. RoPE is preferred over learned absolute
+RoPE is preferred over learned absolute
 positional embeddings because it generalises to sequence positions not seen during
 training \parencite{wang_hierarchical_2025}.
 
@@ -576,8 +575,8 @@ The UHRC therefore treats the hidden states as persistent rolling buffers:
 \begin{equation}
     \mathbf{z}_{H}, \mathbf{z}_{L} \in \mathbb{R}^{B \times C \times h},
 \end{equation}
-where $B$ is the batch size (1 at inference), $C = 16$ is the carry length, and
-$h = 128$ is the hidden dimension. At each timestep, the new observation embedding
+where $B$ is the batch size (1 at inference) and $C = 16$ is the carry length
+. At each timestep, the new observation embedding
 $\mathbf{e}_t$ is appended to the buffer and the oldest entry is discarded:
 \begin{equation}
     \mathrm{roll\_carry}(\mathbf{z}, \mathbf{e}_t) =
@@ -585,18 +584,7 @@ $\mathbf{e}_t$ is appended to the buffer and the oldest entry is discarded:
     \in \mathbb{R}^{B \times C \times h},
 \end{equation}
 providing a fixed-length sliding window of temporal context without unbounded memory
-growth. The carry therefore functions as a learned recurrent state that compresses
-the episode's observational history into a fixed-size representation, structurally
-analogous to the reasoning context in recurrent language models.
-
-Carry tokens appended to the buffer are always gradient-detached (\texttt{DETACH\_CARRY=True}).
-This truncates backpropagation through the carry boundary, preventing gradient chains
-from extending beyond the training sequence window of length $T_{\mathrm{seq}} = 8$
-steps. Empirical evaluation confirmed that this convention does not impair the quality
-of learned temporal representations within the window, consistent with findings in
-the HRM literature \parencite{wang_hierarchical_2025}. At the start of each episode, both
-buffers are initialised to learned constant vectors $\mathbf{h}_H^{\mathrm{init}}$
-and $\mathbf{h}_L^{\mathrm{init}}$ tiled to shape $[1, C, h]$.
+growth. 
 
 
 \subsubsection{H-L Mutual Refinement and One-Step Gradient Approximation}
@@ -605,7 +593,7 @@ and $\mathbf{h}_L^{\mathrm{init}}$ tiled to shape $[1, C, h]$.
 The $H$- and $L$-modules interact through $H_\mathrm{cyc} = 2$ outer cycles each
 containing $L_\mathrm{cyc} = 2$ inner $L$-module passes. At each step, the full
 sequence $\mathbf{z}_H^{(t)} \in \mathbb{R}^{B \times 17 \times h}$ is formed by
-concatenating the $C = 16$ carry tokens with the current observation embedding:
+concatenating the carry tokens with the current observation embedding:
 \begin{equation}
     \mathbf{z}_H^{(t)} = \bigl[\mathbf{Z}_H;\; \mathbf{e}_t^{\top}\bigr], \quad
     \mathbf{z}_L^{(t)} = \bigl[\mathbf{Z}_L;\; \mathbf{e}_t^{\top}\bigr].
@@ -616,30 +604,12 @@ with zeros at carry positions and $\mathbf{e}_t$ at position 16, ensuring the ra
 observation is available as an additive bias at every $L$-module call \parencite{wang_hierarchical_2025}.
 
 To bound the gradient graph depth and maintain training stability, the UHRC adopts
-the one-step gradient approximation from the HRM: all but the final module call in
+the one-step gradient approximation mirrored in \parencite{wang_hierarchical_2025}. all but the final module call in
 the refinement cycle are computed under \texttt{torch.no\_grad()}, and only a single
-$L$-pass followed by a single $H$-pass contribute to the gradient. With
-$H_\mathrm{cyc} = 2$ and $L_\mathrm{cyc} = 2$, the execution schedule is:
-\begin{enumerate}[label=\roman*.]
-    \item \textbf{No-grad}: $L \to L \to H \to L$ \quad (3 $L$-calls, 1 $H$-call)
-    \item \textbf{Gradient}: $L \to H$ \quad (1 $L$-call, 1 $H$-call)
-\end{enumerate}
-The effective gradient path traverses $2 + 2 = 4$ transformer layers in total,
-roughly 3.5$\times$ shallower than the full 14-layer computational graph, preventing
-gradient vanishing while retaining the representational benefit of multiple refinement
-rounds. The $L$-module update at each call is
-\begin{equation}
-    \mathbf{z}_L \leftarrow \mathcal{L}\bigl(\mathbf{z}_L + \mathbf{z}_H + \mathbf{I}_{\mathrm{obs}}\bigr),
-\end{equation}
-and the $H$-module update is
-\begin{equation}
-    \mathbf{z}_H \leftarrow \mathcal{H}(\mathbf{z}_H + \mathbf{z}_L),
-\end{equation}
-where $\mathcal{L}(\cdot)$ and $\mathcal{H}(\cdot)$ denote the respective stacks of
-\texttt{UHRCBlock} layers.
+$L$-pass followed by a single $H$-pass contribute to the gradient. 
 
 
-\subsubsection{Subgoal Generation, Gated Injection, and Action Output}
+\subsubsection{Subgoal Generation, Gated Injection, and Attitude R Output}
 \label{sec:subgoal}
 
 Following the final $H$-module update, the terminal hidden state $\mathbf{z}_H[:,16,:] \in \mathbb{R}^{B \times h}$ (the most recent position in the carry sequence) is decoded by a two-layer MLP planning head into a 2-dimensional body-frame horizontal velocity subgoal:
@@ -657,12 +627,10 @@ where $\sigma$ is the element-wise sigmoid. The gate bias is initialised to $\ma
 \begin{equation}
     \mathbf{z}_L^{\mathrm{final}} = \mathcal{L}\bigl(\mathbf{z}_L + \mathbf{c}\cdot\mathbf{1}_{17}^{\top}\bigr),
 \end{equation}
-from which the attitude reference action is decoded from the terminal position rather than a 4-dimensional body wrench:
+from which the attitude reference action is decoded from the terminal position:
 \begin{equation}
     \hat{\mathbf{u}} = W_a\,\mathbf{z}_L^{\mathrm{final}}[:,16,:] = [\hat{\phi}_{\mathrm{ref}},\; \hat{\theta}_{\mathrm{ref}}]^{\top} \in \mathbb{R}^{2}.
 \end{equation}
-The action head weight is initialised with a standard deviation of $10^{-2}$. 
-Initializing the network to output a zero-angle (level) attitude before learning occurs. Yaw intent ($\psi_{\mathrm{ref}}$) and total thrust ($F_z$) are excluded from this action space, as the body-frame observation vector is heading-invariant and the classical inner-loop PID handles independent altitude tracking and heading regulation. 
 The full architectural configuration is summarised in Table~\ref{tab:arch_config}.
 
 \begin{table}[ht]
@@ -748,7 +716,7 @@ learned policy fails to navigate in the $-x$ or $\pm y$ directions.
 
 Every 50 steps with probability 0.3, the current state receives a Gaussian velocity
 perturbation ($\sigma = 0.2$\,m/s) and a small random yaw offset
-($|\delta\psi| \leq 0.15$\,rad). This DAgger-style augmentation \parencite{levine_end--end_2016}
+($|\delta\psi| \leq 0.15$\,rad). This DAgger-style augmentation implemented by \cite{levine_end--end_2016},
 exposes the expert to a wider distribution of states and prevents the compounding
 error pathology characteristic of pure behavioural cloning.
 
@@ -758,7 +726,7 @@ Episodes are included only if: (i) the drone reached the goal without collision;
 (iii) the average velocity subgoal magnitude during the final hover phase was below
 $0.3$\,m/s. To render the expert signal learnable by the neural policy, post-processing is applied to the raw A* tracker outputs. High-frequency discontinuities in the expert commands are smoothed using an Exponential Moving Average (EMA) filter with smoothing factors $\alpha_{\mathrm{act}} = 0.12$ and $\alpha_{\mathrm{sub}} = 0.08$. 
 Furthermore, to demonstrate stable termination, a hover deadband override is enforced, clamping $\phi_{\mathrm{ref}}$ and $\theta_{\mathrm{ref}}$ to zero when the vehicle enters the 0.1\,m goal acceptance radius. 
-Maximum attitude commands are strictly clamped to $\pm 30^{\circ}$ to guarantee the demonstrations remain within the dynamically feasible envelope of the low-level PID.
+Maximum attitude commands are strictly clamped to $\pm 30^{\circ}$ to guarantee the demonstrations remain within the feasible limits of the low-level PID.
 
 \subsection{Behavioural Cloning Training}
 \label{sec:training}
@@ -852,9 +820,7 @@ Subgoal weights              & $\mathbf{w}_s$             & [10.0, 10.0] \\
 
 Both controllers are evaluated across five structured test cases (TC01--TC05) of
 increasing environmental complexity. To ensure a fair comparison, both controllers
-receive ideal state feedback from the same underlying simulation state; neither
-suffers from sensor noise or state estimation error. Start positions, goal positions,
-and obstacle configurations are seeded identically for both controllers. Each
+receive ideal state feedback from the same simulation state. Each
 test case is repeated for $N = 30$ randomised Monte Carlo trials and metrics are
 averaged over successful and failed trials.
 
@@ -1110,16 +1076,14 @@ attitude instability or tumbling.
 \section{Results}
 \label{sec:results}
 
-This section presents quantitative and qualitative results for the UHRC and the
+This section presents quantitative and qualitative results for the UHRC-PID and the
 classical hierarchical baseline across the five structured test cases (TC01--TC05).
 All metrics are computed over $N = 30$ Monte Carlo trials per scenario. RMSE and
 IAE are evaluated over a full episode duration (this is dependent based on how long the drone takes to reach the goal), including failed and
 divergent trials. This is done, so that aggregate statistics reflect operational reliability
 rather than selective best-case performance. Path length ratio (PLR) is defined as
 the ratio of actual path length travelled to the straight-line start-to-goal
-distance. Corrected units are used throughout: IAE has units of m\,s and ITAE has
-units of m\,s$^2$, consistent with integrating position error (m) over time (s).
-
+distance.
 Table~\ref{tab:results_summary} presents the consolidated performance summary across
 all scenarios and both controllers.
 
@@ -1413,7 +1377,7 @@ complementary design boundaries.
 \subsection{Policy Stability and Guidance Efficacy}
 \label{sec:discuss_stability}
 
-The implementation of the cascaded architecture confirms that the UHRC can 
+The implementation of the cascaded architecture serves as a proof of principle, that the UHRC can 
 achieve highly effective goal-directed navigation under nominal conditions. By delegating 
 high-frequency attitude regulation to the inner-loop PID controller, the outer-loop is freed from the burden of compensating for fast rotational dynamics, thereby 
 mitigating the distributional compounding problem \parencite{le_mero_survey_2022, block_is_2024}. 
@@ -1457,7 +1421,7 @@ where the learned hierarchy explicitly outperforms classical explicit decomposit
 Obstacles are hidden from both controllers' sensor streams until $t \geq 3.0$\,s, at which
 point they are revealed within the drone's active flight path. 
 
-The classical controller's failure is structural: obstacle detection is contingent on the 
+The classical controller's failure is displayed in obstacle detection being contingent on the 
 LiDAR scan being projected into the occupancy grid and a revised waypoint sequence being 
 computed by A* and propagated to the pure-pursuit tracker. This latency window ensures 
 collision before replanning can redirect the vehicle \parencite{li_hierarchical_2023, 
@@ -1504,11 +1468,7 @@ This paper presented the Unified Hierarchical Reasoning Controller (UHRC), the
 first systematic application of the Hierarchical Reasoning Model (HRM) architecture
 to a continuous nonlinear closed-loop control system. The model was ultimately formulated 
 as a cascaded UHRC-PID hybrid, where a recurrent transformer outer-loop generates attitude 
-intent, and a classical inner-loop handles high-frequency rigid-body stabilization. A
-persistent 16-slot rolling carry buffer, RoPE positional encoding, and a gated
-subgoal injection mechanism were introduced as principled adaptations of the
-discrete HRM architecture to the requirements of continuous real-time control.
-
+intent, and a classical inner-loop handles high-frequency rigid-body stabilization. 
 The comparative evaluation against a classical SLAM-augmented cascaded PID baseline
 across five structured test cases produced principal findings. First, the HRM architecture 
 can learn a highly functional continuous control policy when timescale separation is 
@@ -1521,8 +1481,8 @@ robustness, classical integral feedback remains the superior paradigm for reject
 severe, unmodelled parametric uncertainty.
 
 The primary direction for future work is domain randomisation during training,
-which directly addresses residual distributional fragility without architectural modification.
-Reinforcement learning fine-tuning from the behaviourally cloned initialisation
+which directly addresses residual distributional fragility without architectural modification. Use of an ideal controller, in replace of the PID regulators to further improve the accurancy of the learned mode.
+Finally, reinforcement learning fine-tuning from the behaviourally cloned initialisation
 would further allow the policy to discover corrective strategies absent from the offline 
 expert. Beyond these immediate extensions, the UHRC framework provides a principled foundation 
 for investigating whether unified hierarchical reasoning can serve as the definitive 
