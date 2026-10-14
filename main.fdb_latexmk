@@ -1,14 +1,14 @@
 # Fdb version 4
-["biber main"] 1790089923.14244 "main.bcf" "main.bbl" "main" 1790871423.32182 0
-  "main.bcf" 1790871423.18254 117293 861bbdabeae3a10cd7031be412debd2c "pdflatex"
-  "references.bib" 1789994226.78141 286222 affcb90c47440441e5fea75b08c94250 ""
+["biber main"] 1791930511.49039 "main.bcf" "main.bbl" "main" 1791930664.69996 0
+  "main.bcf" 1791930664.49807 116984 57111d87dfae1953a73a0068f44c1656 "pdflatex"
+  "references.bib" 1791930496.02515 286748 6205f21a65c2071db638d6ac42d27464 ""
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["pdflatex"] 1790871419.07875 "/home/nunes/uhrc-paper/main.tex" "main.pdf" "main" 1790871423.32231 0
+["pdflatex"] 1791930658.51281 "/home/nunes/uhrc-paper/main.tex" "main.pdf" "main" 1791930664.70062 0
   "/etc/texmf/web2c/texmf.cnf" 1778252968.0548 475 c0e671620eb5563b2130f56340a5fde8 ""
-  "/home/nunes/uhrc-paper/main.tex" 1790871407.33805 78947 435758ca0397f6db7a5c7a778db9fd66 ""
+  "/home/nunes/uhrc-paper/main.tex" 1791930658.01478 93900 855e769ba9bae8f44b19574efec4f8d9 ""
   "/usr/share/texlive/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/jknappen/ec/ecrm1200.tfm" 1136768653 3584 f80ddd985bd00e29e9a6047ebd9d4781 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm" 1246382020 916 f87d7c45f9c908e672703b83b72241a3 ""
@@ -16,7 +16,6 @@
   "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm10.tfm" 1246382020 908 2921f8a10601f252058503cc6570e581 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm7.tfm" 1246382020 940 228d6584342e91276bf566bcf9716b83 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmr12.tfm" 1136768653 1288 655e228510b4c2a1abe905c368440826 ""
-  "/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msam10.pfb" 1248133631 31764 459c573c03a4949a528c2cc7f557e217 ""
   "/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb" 1248133631 34694 ad62b13721ee8eda1dcc8993c8bd7041 ""
   "/usr/share/texlive/texmf-dist/tex/context/base/mkii/supp-pdf.mkii" 1461363279 71627 94eb9990bed73c364d7f53f960cc8c5b ""
   "/usr/share/texlive/texmf-dist/tex/generic/atbegshi/atbegshi.sty" 1575674566 24708 5584a51a7101caf7e6bbf1fc27d8f7b1 ""
@@ -147,7 +146,6 @@
   "/usr/share/texmf/fonts/tfm/public/lm/rm-lmr8.tfm" 1254269338 11864 309fd7f43e4a0ba39f6f7644d76e8edf ""
   "/usr/share/texmf/fonts/type1/public/lm/lmbx10.pfb" 1255129361 121021 1bf809ce4a594679006bd72263eba59b ""
   "/usr/share/texmf/fonts/type1/public/lm/lmbx12.pfb" 1255129361 116908 1fca96723793882c2e0160350c192fc8 ""
-  "/usr/share/texmf/fonts/type1/public/lm/lmbx8.pfb" 1255129361 125241 1d6de6a4ab0d08571b46009b6426dace ""
   "/usr/share/texmf/fonts/type1/public/lm/lmcsc10.pfb" 1255129361 116427 4a5b1ccaa7cce719091920a86b58608d ""
   "/usr/share/texmf/fonts/type1/public/lm/lmex10.pfb" 1254269338 23055 2e5b42921de910eaa97b85df04ca4891 ""
   "/usr/share/texmf/fonts/type1/public/lm/lmmi10.pfb" 1254269338 30388 702fae6a5f0e6e9c48a1d872b442ffcf ""
@@ -162,7 +160,6 @@
   "/usr/share/texmf/fonts/type1/public/lm/lmr8.pfb" 1255129361 122174 a7a08406857c9530a0320a2517f60370 ""
   "/usr/share/texmf/fonts/type1/public/lm/lmri12.pfb" 1255129361 109265 32320cb6133d4d76bf83e27b5eb4009b ""
   "/usr/share/texmf/fonts/type1/public/lm/lmsy10.pfb" 1254269338 27863 09ce3735688ffde955e72da27c95b61a ""
-  "/usr/share/texmf/fonts/type1/public/lm/lmsy6.pfb" 1254269338 28109 6d61305ed3d0eb794ebe36f15cf44aa0 ""
   "/usr/share/texmf/fonts/type1/public/lm/lmsy8.pfb" 1254269338 27802 5c876bb2c4040caaf035d60bd74a86bd ""
   "/usr/share/texmf/fonts/type1/public/lm/lmtt12.pfb" 1255129361 110323 92daea7ca7b4120bd2b54b047c93be27 ""
   "/usr/share/texmf/tex/latex/lm/lmodern.sty" 1616454256 1608 b00724785a9e9c599e5181bb8729160b ""
@@ -187,11 +184,11 @@
   "figures/tc05_uhrc-pid_perturbed.png" 1788889482.31161 86611 49b370fe933be48b26397cc8cdb468fb ""
   "figures/tc05_uhrc-pid_torque.png" 1788889503.38648 147199 f08ea6e95212bc2430b6136b7ac87a0a ""
   "figures/tc05_uhrc_nominal.png" 1784751892.98751 18396 989113f143d2970501e11785747864a3 ""
-  "main.aux" 1790871423.16604 37852 6f37f85d2387ea6a050eed921964990c "pdflatex"
-  "main.bbl" 1790089925.39545 254990 30b28ebdf5b03f777a01b0a4f5ad0e3b "biber main"
-  "main.out" 1790871423.18254 7663 f73d1ae0ab4197fde33043d2195695a6 "pdflatex"
-  "main.run.xml" 1790871423.18667 2311 e66a0e3ff336a5af941c7fe634558519 "pdflatex"
-  "main.tex" 1790871407.33805 78947 435758ca0397f6db7a5c7a778db9fd66 ""
+  "main.aux" 1791930664.46331 40167 6137ffa88ea4d784f86068417d9cbfdf "pdflatex"
+  "main.bbl" 1791930515.44105 256637 a02a1b8c892e9bb311e5fc4174dd208a "biber main"
+  "main.out" 1791930664.49807 7698 4ab8f792f60159cd703059894cd35355 "pdflatex"
+  "main.run.xml" 1791930664.50241 2311 e66a0e3ff336a5af941c7fe634558519 "pdflatex"
+  "main.tex" 1791930658.01478 93900 855e769ba9bae8f44b19574efec4f8d9 ""
   (generated)
   "main.aux"
   "main.bcf"

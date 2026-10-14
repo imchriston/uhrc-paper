@@ -51,7 +51,8 @@
 }
 
 \date{
-    \textsuperscript{1}Department of Electrical and Computer Engineering, University of the West Indies St.Augustine \\
+    \textsuperscript{1,3,4}Dept. of Electrical and Comp. Engineering, UWI St.Augustine \\
+    \textsuperscript{2}Artificial Intelligence Innovation Centre, UWI St.Augustine \\
     \small Corresponding Author: \href{mailto:nuneschriston20@gmail.com}{nuneschriston20@gmail.com}
 }
 
@@ -59,258 +60,125 @@
 
 \maketitle
 \begin{abstract}
-The autonomous control of nonlinear systems such as quadrotor UAVs traditionally
-requires an explicit separation between slow outer-loop trajectory planning and fast
-inner-loop attitude stabilisation. End-to-end learning approaches attempt to collapse
-this hierarchy but suffer from severe sample inefficiency and compounding covariate
-shift, leading to divergence in dynamic environments. This paper presents the Unified
-Hierarchical Reasoning Controller (UHRC), a novel cascaded architecture that
-integrates a two-level recurrent transformer as a high-level kinematic guidance
-module with a classical inner-loop PID attitude regulator. By training the UHRC to
-output kinematically feasible attitude intent $[\phi_{\mathrm{ref}},
-\theta_{\mathrm{ref}}]$, the architecture inherently respects the multiscale temporal
-dynamics of the plant and confines the consequences of neural prediction error to the
-slower translational timescale where the inner PID provides a stabilising correction.
-The hybrid UHRC-PID is evaluated against a classical SLAM-augmented cascaded PID
-baseline across five structured test cases of increasing geometric complexity:
-open-field transit, symmetric corridor navigation, gap threading, dynamic obstacle
-avoidance, and parametric robustness under simultaneous plant uncertainty. The hybrid
-achieves success rates of 20--30\% across constrained navigation scenarios and 20\%
-under dynamic obstacle conditions where both the pure neural policy and the classical
-SLAM controller record 0\%, while providing a formal cascade ISS stability guarantee
-for the rotational subsystem. These results establish the UHRC-PID as a robust,
-computationally tractable framework that resolves the divergence modes of flat
-end-to-end policies without sacrificing the reactive spatial reasoning advantages of
-learned hierarchical control.
+The autonomous control of nonlinear systems, such as quadrotor UAVs, has traditionally required the explicit separation of slow outer-loop trajectory planning from fast inner-loop attitude stabilization.
+End-to-end learning approaches seek to collapse this hierarchy, but suffer from severe sample inefficiency and compounding covariate shift, which lead to divergence in dynamic environments.
+To address these limitations, this work develops the Unified Hierarchical Reasoning Controller (UHRC), a novel cascaded architecture which pairs a two-level recurrent transformer for high-level kinematic guidance with a classical inner-loop Proportional-Integral-Derivative (PID) attitude regulator.
+The UHRC is trained to generate kinematically feasible attitude intent $[\phi_{\mathrm{ref}}, \theta_{\mathrm{ref}}]$.
+This formulation inherently respects the multiscale temporal dynamics of the plant, confining the effects of neural prediction error to the slower translational timescale, where the inner PID supplies a stabilizing correction.
+The resulting UHRC-PID is evaluated against a classical Simultaneous Localization and Mapping (SLAM)-augmented cascaded PID baseline in five structured test cases of increasing geometric complexity which includes open-field transit, symmetric corridor navigation, gap threading, dynamic obstacle avoidance and parametric robustness under simultaneous plant uncertainty.
+The hybrid achieves success rates of 20--30\% in the constrained navigation scenarios and 20\% under dynamic obstacle conditions, where both the pure neural policy and the classical SLAM controller record 0\%.
+A formal cascade Input-to-State Stability (ISS) guarantee is also established for the rotational subsystem.
+These results establish the UHRC-PID as a robust and computationally tractable framework which resolves the divergence modes of flat end-to-end policies, while retaining the reactive spatial reasoning capabilities of learned hierarchical control.
 \end{abstract}
 
 \section{Introduction}
 \label{sec:introduction}
 
-The autonomous control of complex nonlinear systems remains one of the most
-consequential open problems in control engineering
-\parencite{iqbal_nonlinear_2017, liu_new_2015, daoutidis_future_2023}.
-Systems such as unmanned aerial vehicles (UAVs), autonomous ground vehicles (UGVs),
-and high degree-of-freedom robotic manipulators are characterised by
-high dimensional state spaces, nonlinear inter-state couplings, actuator
-saturation, and significant parametric uncertainty
-\parencite{sadati_two-level_2015, ameli_robust_2021, iqbal_nonlinear_2017,
-slotine_applied_1991}.
-The fundamental difficulties are that the dynamical regimes governing long horizon
-navigation and those governing fast stabilisation operate on different
-timescales, differ in their sensitivity to model error, and impose competing
-demands on the same system.
-\parencite{liang_nonlinear_2018, abdelmaksoud_control_2020}.
-Designing a controller that simultaneously addresses long horizon planning and
-fast reactive stabilisation across these coupled dynamics is fundamentally a
-multiscale reasoning problem, and no single architecture has proven universally
-adequate across the competing demands of stability, adaptability, and
-computational tractability \parencite{rojas_complex_2025, goodwin_control_2001}.
+The autonomous control of complex nonlinear systems remains one of the most consequential open problems in control engineering \parencite{iqbal_nonlinear_2017, liu_new_2015, daoutidis_future_2023}.
+Systems such as Unmanned Aerial Vehicles (UAVs), Autonomous Ground Vehicles (UGVs) and high Degree-of-Freedom (DOF) robotic manipulators are characterized by high-dimensional state spaces, nonlinear inter-state couplings, actuator saturation and significant parametric uncertainty \parencite{sadati_two-level_2015, ameli_robust_2021, iqbal_nonlinear_2017, slotine_applied_1991}.
+The fundamental difficulties are that the dynamical regimes associated with long-horizon navigation and fast stabilization operate on different timescales.
+These dynamical regimes also differ in their sensitivity to model error and impose competing demands on the same system \parencite{liang_nonlinear_2018, abdelmaksoud_control_2020}.
+Designing a controller that simultaneously addresses long-horizon planning and fast reactive stabilization across these coupled dynamics is fundamentally a multiscale reasoning problem.
+To date, no single architecture has proven universally adequate in satisfying the competing requirements of stability, adaptability and computational tractability \parencite{rojas_complex_2025, goodwin_control_2001}.
  
-Classical hierarchical control has long addressed this multi-scale challenge
-through explicit structural decomposition, a high-level supervisory layer
-generates strategic plans and setpoints while a low-level regulatory layer
-executes fast stabilisation and trajectory tracking
-\parencite{singh_systems_1978, sadati_two-level_2015, scattolini_hierarchical_2007,
-mesarovic_two_1970, wilson_foundations_1979}.
-The theoretical underpinnings of this separation trace to the multilevel systems
-framework of \parencite{mesarovic_two_1970} and the hierarchical decomposition
-methods formalised in \parencite{singh_systems_1978, siljak_decentralized_2013},
-which established that large scale optimisation problems can be rendered
-tractable by decomposing them into coordinated subproblems across levels.
-This architecture has achieved sustained success across aerospace, process
-control, and robotics, benefiting from well established stability theory,
-modular implementation, and interpretable failure modes
-\parencite{sanders_hierarchical_1998, wang_hierarchical_2024, liu_generalized_2016,
-bahnasawi_decentralised_1990, roberts_optimal_2001}.
-The quadrotor UAV exemplifies this paradigm directly, the natural timescale
-separation between slow translational dynamics and fast rotational dynamics
-motivates a cascaded structure in which outer loop position planners generate
-attitude references consumed by inner-loop attitude regulators
-\parencite{hoffmann_quadrotor_2007, liang_nonlinear_2018, bouabdallah_pid_2004,
-nagaty_control_2013, abdelhay_modeling_2019}.
-Model predictive control has provided a principled realisation of the
-supervisory layer in such architectures, enabling constraint aware planning
-with formal stability guarantees at the coordination level
-\parencite{scattolini_hierarchical_2007, wang_hierarchical_2024,
-torrente_data-driven_2021}.
+Classical hierarchical control has long addressed these multiscale requirements by decomposing the control task into distinct levels.
+In such a formulation, a high-level supervisory layer generates strategic plans and setpoints, while a low-level regulatory layer carries out fast stabilization and trajectory tracking \parencite{singh_systems_1978, sadati_two-level_2015, scattolini_hierarchical_2007, mesarovic_two_1970, wilson_foundations_1979}.
+The theoretical basis for this separation traces to the multilevel systems framework of \textcite{mesarovic_two_1970} and the hierarchical decomposition methods of \textcite{singh_systems_1978} and \textcite{siljak_decentralized_2013}.
+These works showed that large-scale optimization problems can be made tractable through their decomposition into coordinated subproblems across levels.
+Owing to its established stability theory, modular implementation and interpretable failure modes, hierarchical control has achieved sustained success in aerospace, process control and robotics \parencite{sanders_hierarchical_1998, wang_hierarchical_2024, liu_generalized_2016, bahnasawi_decentralised_1990, roberts_optimal_2001}.
+The quadrotor UAV directly exemplifies this paradigm.
+Here, the natural timescale separation between slow translational and fast rotational dynamics motivates a cascaded control structure, where an outer-loop position planner generates attitude references for an inner-loop attitude regulator \parencite{hoffmann_quadrotor_2007, liang_nonlinear_2018, bouabdallah_pid_2004, nagaty_control_2013, abdelhay_modeling_2019}.
+Model Predictive Control (MPC) provides a systematic means of implementing the supervisory layer, permitting constraint-aware planning with formal stability guarantees at the coordination level \parencite{scattolini_hierarchical_2007, wang_hierarchical_2024, torrente_data-driven_2021}.
  
-However, the fixed interface between layers introduces a structural information
-bottleneck that becomes consequential as task complexity grows
-\parencite{kolchinsky_nonlinear_2019, li_hierarchical_2023,
-abdelmaksoud_control_2020}.
-The high-level planner typically transmits heavily compressed information
-ordinarily a kinematic waypoint sequence to the low-level regulator,
-discarding contextual information regarding obstacle proximity, actuator
-feasibility, and local geometric constraints that may be critical for downstream
-control quality \parencite{zhu_hierarchical_2024, zhou_two-level_2017,
-liu_adaptive_2013}.
-Conversely, the low-level regulator executes reference trajectories without
-access to the global context that motivated them, rendering local disturbance
-responses globally suboptimal
-\parencite{nguyen_identifying_2021, daoutidis_decomposition_2019}.
-Fixed rule based supervisory frameworks also become brittle when the system
-encounters scenarios not anticipated at design time
-\parencite{sadati_hierarchical_2008, dave_design_2023}.
-These limitations are not incidental but structural, they arise from the
-requirement that the planner and regulator communicate through a
-prespecified, fixed dimensional interface whose information content is
-determined at design time rather than adapted online to task demands
-\parencite{kolchinsky_nonlinear_2019, zhang_multi-level_2015}.
+However, the fixed interface between these layers introduces a structural information bottleneck whose effects become consequential as task complexity increases \parencite{kolchinsky_nonlinear_2019, li_hierarchical_2023, abdelmaksoud_control_2020}.
+The high-level planner typically communicates a heavily compressed representation, ordinarily a sequence of kinematic waypoints, to the low-level regulator.
+Consequently, information about obstacle proximity, actuator feasibility and local geometric constraints, which may be necessary for downstream control quality, is discarded \parencite{zhu_hierarchical_2024, zhou_two-level_2017, liu_adaptive_2013}.
+Conversely, the low-level regulator tracks these references without access to the global context from which they were derived, such that its response to local disturbances is globally suboptimal \parencite{nguyen_identifying_2021, daoutidis_decomposition_2019}.
+Fixed rule-based supervisory frameworks also exhibit brittleness when operating in scenarios that were not considered during their design \parencite{sadati_hierarchical_2008, dave_design_2023}.
+These limitations are structural, rather than incidental.
+They arise from the requirement that the planner and regulator communicate through a prespecified, fixed-dimensional interface, whose information content is chosen at design time and does not adapt online to the requirements of the task \parencite{kolchinsky_nonlinear_2019, zhang_multi-level_2015}.
  
-Learning based approaches have emerged as a principled alternative.
-End-to-end reinforcement learning (RL) enables joint optimisation of planning
-and regulation without manual interface specification
-\parencite{almahamid_reinforcement_2021, levine_end--end_2016, kiran_deep_2022,
-shakya_reinforcement_2023}.
-Behavioural cloning provides a supervised alternative that sidesteps the
-credit assignment challenges of RL by learning directly from expert
-demonstrations, and has seen substantial success in autonomous driving and
-manipulation \parencite{levine_end--end_2016, le_mero_survey_2022, ly_learning_2021,
-block_is_2024}.
-However, flat end-to-end policies are notoriously sample inefficient,
-sensitive to reward shaping, and do not naturally maintain the multiscale
-temporal structure that long horizon UAV navigation demands and
-allocates identical computational depth regardless of whether the task requires
-strategic deliberation or reactive stabilisation
-\parencite{almahamid_reinforcement_2021, agyei_deep_2025}.
-Deep reinforcement learning approaches applied directly to quadrotor control
-have demonstrated impressive agility in simulation
-\parencite{trad_real-time_2024, saviolo_learning_2023}, but the sim-to-real gap,
-sample complexity, and absence of formal stability guarantees remain open
-challenges \parencite{dai_lyapunov-stable_2021, agyei_deep_2025}.
-Hybrid neurosymbolic and fuzzy integrated controllers partially address this
-brittleness by pairing learned components with structured decomposition
-\parencite{tang_fuzzy_2024, mahmoud_fractional-order_2024, tran_hybrid_2021,
-baheri_hierarchical_2025}, yet the supervisory-regulatory interface and its
-dimensionality remain manually prescribed.
-The boundary between planning and regulation is fixed by the designer, not
-learned from data \parencite{borri_design_2019, yu_survey_2023}.
+Learning-based approaches have emerged as a principled alternative for addressing these limitations.
+End-to-end Reinforcement Learning (RL) permits the joint optimization of planning and regulation without manually specifying their interface \parencite{almahamid_reinforcement_2021, levine_end--end_2016, kiran_deep_2022, shakya_reinforcement_2023}.
+Behavioral cloning instead learns directly from expert demonstrations, providing a supervised approach that avoids the credit assignment difficulties associated with RL.
+Behavioral cloning has seen substantial success in autonomous driving and manipulation \parencite{levine_end--end_2016, le_mero_survey_2022, ly_learning_2021, block_is_2024}.
+Flat end-to-end policies, however, are notoriously sample inefficient and sensitive to reward shaping.
+They do not inherently preserve the multiscale temporal structure required for long-horizon UAV navigation, and employ the same computational depth for strategic deliberation and reactive stabilization \parencite{almahamid_reinforcement_2021, agyei_deep_2025}.
+Deep RL methods applied directly to quadrotor control have achieved high agility in simulation \parencite{trad_real-time_2024, saviolo_learning_2023}.
+Despite this, the sim-to-real gap, sample complexity and lack of formal stability guarantees remain unresolved \parencite{dai_lyapunov-stable_2021, agyei_deep_2025}.
+Hybrid neurosymbolic and fuzzy-integrated controllers partially address this brittleness through the combination of learned components and structured decomposition \parencite{tang_fuzzy_2024, mahmoud_fractional-order_2024, tran_hybrid_2021, baheri_hierarchical_2025}.
+The supervisory-regulatory interface and its dimensionality nevertheless remain manually specified.
+That is, the boundary between planning and regulation is fixed by the designer, rather than learned from data \parencite{borri_design_2019, yu_survey_2023}.
  
-Recent advances in neural reasoning architectures offer a substantially
-different approach to this problem.
-Test time scaling methods that iterate computations in latent space
-\parencite{geiping_scaling_2025, li_seek_2025} and recurrent architectures that
-adapt computational depth to task difficulty
-\parencite{geiping_scaling_2025, li_system_2025}
-suggest that the depth of processing required for a given decision can be made
-emergent rather than fixed.
-The Hierarchical Reasoning Model (HRM), introduced by
-\parencite{wang_hierarchical_2025}, is a two tier recurrent architecture comprising
-a high-level module responsible for slow, abstract planning and a low-level
-module handling rapid, detailed computation, coupled through a shared carry
-state that enables adaptive allocation of computational depth.
-Trained on as few as 1{,}000 examples without pre-training or chain-of-thought
-supervision, the HRM achieves near perfect accuracy on complex Sudoku problems
-and optimal pathfinding in large maze tasks on which state-of-the-art large
-language model approaches fail entirely \parencite{wang_hierarchical_2025,
-huang_towards_2023, feng_efficient_2025}.
-Crucially, the hierarchical role specialisation between modules emerges through
-training rather than being architecturally prescribed, mirroring the
-representational dimensionality hierarchy observed across cortical regions in
-the mammalian brain \parencite{badre_frontal_2018, huntenburg_large-scale_2018,
-murray_hierarchy_2014}, where higher order areas operate over longer intrinsic
-timescales and higher dimensional representations than primary sensory regions.
-Building on this, \parencite{jin_decoupled_2025} demonstrated that decoupling
-planning from execution in a hierarchical framework yields measurable gains in
-multistep reasoning tasks, further motivating the application of this design
-principle to closed loop control.
-The hierarchical neuro-symbolic decision transformer of
-\parencite{baheri_hierarchical_2025} similarly demonstrates that coupling a symbolic
-planner with a learned low-level policy through a structured interface
-outperforms both purely symbolic and purely neural baselines on sequential
-decision tasks, providing additional evidence that the hierarchical
-planning-execution separation confers a genuine computational advantage beyond
-what either component achieves in isolation.
+Recent developments in neural reasoning architectures offer a substantially different means of addressing this problem.
+Test-time scaling methods which repeat computations in latent space \parencite{geiping_scaling_2025, li_seek_2025}, together with recurrent architectures which adapt computational depth to task difficulty \parencite{geiping_scaling_2025, li_system_2025}, suggest that the processing depth required for a decision can be made emergent, rather than fixed.
+The Hierarchical Reasoning Model (HRM) of \textcite{wang_hierarchical_2025} comprises two recurrent levels: a high-level module for slow, abstract planning and a low-level module for rapid, detailed computation.
+The modules are coupled through a shared carry state, allowing computational depth to be allocated adaptively.
+With as few as 1{,}000 training examples, and without pre-training or chain-of-thought supervision, the HRM achieves near-perfect accuracy on complex Sudoku problems and optimal pathfinding in large mazes, for which state-of-the-art Large Language Model (LLM) approaches fail entirely \parencite{wang_hierarchical_2025, huang_towards_2023, feng_efficient_2025}.
+The hierarchical role specialization of the two modules emerges during training, rather than being prescribed by the architecture.
+This mirrors the hierarchy of representational dimensionality observed across cortical regions of the mammalian brain , where higher-order areas exhibit longer intrinsic timescales and higher-dimensional representations than primary sensory regions \parencite{badre_frontal_2018, huntenburg_large-scale_2018, murray_hierarchy_2014}.
+Building on this, \textcite{jin_decoupled_2025} showed that separating planning from execution within a hierarchical framework improves multistep reasoning, further motivating the use of this principle in closed-loop control.
+Similarly, the hierarchical neuro-symbolic decision transformer of \textcite{baheri_hierarchical_2025} demonstrates that coupling a symbolic planner with a learned low-level policy through a structured interface outperforms both purely symbolic and purely neural baselines in sequential decision tasks.
+This result provides further evidence that separating planning and execution offers a genuine computational advantage beyond that of either component alone.
  
-Nevertheless, all demonstrated HRM applications to date have been confined to
-discrete, turn based domains.
-Whether the same unified reasoning mechanism can function as a closed loop
-controller for continuous, real time nonlinear dynamical systems where
-control outputs must be physically continuous, observations arrive as dense
-sensory streams, and temporal context must persist across thousands of control
-cycles remains entirely unexplored in the literature.
-Extending HRMs to such settings requires nontrivial architectural adaptations, discrete
-token outputs must be replaced by continuous commands, and the supervised
-training signal must be derived from a physically meaningful expert policy
-rather than symbolic ground truth labels.
-Localisation and mapping, which are prerequisite for any meaningful planning
-computation, must be supplied by an onboard sensor
-\parencite{gupta_simultaneous_2022, milijas_comparison_2021,
-munguia_uav_2025, chen_slam_2022}
-whose outputs form part of the continuous observation stream consumed by
-the controller.
+Despite these developments, all demonstrated applications of the HRM have so far been restricted to discrete, turn-based domains.
+Its use as a closed-loop controller for continuous, real-time nonlinear dynamical systems remains entirely unexplored in the literature.
+In this setting, the control outputs must be physically continuous, observations are supplied as dense sensory streams, and temporal context must be retained over thousands of control cycles.
+The extension of HRMs to continuous control requires nontrivial architectural modifications.
+Continuous commands must replace discrete token outputs, while the supervised training signal must be obtained from a physically meaningful expert policy instead of symbolic ground truth labels.
+Also, localization and mapping, which are prerequisites for meaningful planning, must be supplied by an onboard sensor, as supported by \cite{gupta_simultaneous_2022, milijas_comparison_2021, munguia_uav_2025, chen_slam_2022}, with its outputs incorporated into the continuous observation stream.
  
-This paper addresses that gap by proposing and evaluating the \textit{Unified
-Hierarchical Reasoning Controller} (UHRC) in a cascaded hybrid architecture for the
-autonomous navigation of a six-degree-of-freedom quadrotor UAV, constituting the
-first systematic application of the HRM architecture to a continuous nonlinear
-closed-loop control system. The UHRC adapts the HRM's two-level reasoning structure
-into a recurrent transformer that maps a 45-dimensional body-frame observation
-comprising kinematic state, goal displacement, and a 32-ray planar LiDAR scan 
-to desired attitude references $[\phi_{\mathrm{ref}}, \theta_{\mathrm{ref}}]$,
-trained via behavioural cloning \parencite{levine_end--end_2016, le_mero_survey_2022,
-block_is_2024} on expert trajectory data generated by an A* path planner
-\parencite{lavalle_planning_2006, qin_review_2023} across 500 simulated episodes.
-These references are consumed by a classical cascaded PID attitude regulator, which
-provides formal inner-loop stability and integral disturbance rejection. The composite
-architecture is evaluated against a classical hierarchical baseline incorporating
-SLAM-based localisation \parencite{gupta_simultaneous_2022, milijas_comparison_2021},
-A* path planning, and cascaded PID control \parencite{bouabdallah_pid_2004,
-ren_cascade_2016, abdelhay_modeling_2019, lopez-sanchez_pid_2023} across five
-structured test cases of increasing environmental complexity: open-field transit
-(TC01), symmetric corridor navigation (TC02), gap threading (TC03), dynamic obstacle
-avoidance (TC04), and parametric robustness under simultaneous plant model uncertainty
-(TC05).
+To address this gap, we propose and evaluate the \textit{Unified Hierarchical Reasoning Controller} (UHRC) within a cascaded hybrid architecture for autonomous navigation of a six-degree-of-freedom quadrotor UAV.
+This work constitutes the first systematic application of the HRM architecture to a continuous nonlinear closed-loop control system.
+The UHRC adapts the two-level reasoning structure of the HRM into a recurrent transformer, which maps a 45-dimensional body-frame observation to desired attitude references $[\phi_{\mathrm{ref}}, \theta_{\mathrm{ref}}]$.
+The observation contains the kinematic state, goal displacement and a 32-ray planar Light Detection and Ranging (LiDAR) scan.
+Behavioral cloning, employed by\cite{levine_end--end_2016, le_mero_survey_2022, block_is_2024} is used to train the UHRC on expert trajectories generated by an A* path planner over 500 simulated episodes \parencite{lavalle_planning_2006, qin_review_2023}.
+A classical cascaded Proportional-Integral-Derivative (PID) attitude regulator tracks the resulting references, providing formal inner-loop stability and integral disturbance rejection.
+In this implementation, the proposed architecture is compared with a classical hierarchical baseline comprising Simultaneous Localization and Mapping (SLAM)-based localization \parencite{gupta_simultaneous_2022, milijas_comparison_2021}, A* path planning and cascaded PID control \parencite{bouabdallah_pid_2004, ren_cascade_2016, abdelhay_modeling_2019, lopez-sanchez_pid_2023}.
+The baseline's regulation layer is chosen as cascaded PID for several reasons.
+PID remains the dominant regulation law on
+embedded flight controllers (PX4, ArduPilot, and the Crazyflie's own onboard firmware),
+making it the more deployment relevant comparator for a system explicitly targeting
+resource-constrained hardware, where MPC's online optimisation is frequently
+infeasible at the required control rate. Further motivation is that the PID is the dominant
+controller in industrial practice more broadly \parencite{astrom_pid_1995, astrom_future_2001}.
+Making it the most practically representative classical baseline available. 
+The comparison considers five structured test cases of increasing environmental complexity: open-field transit (TC01), symmetric corridor navigation (TC02), gap threading (TC03), dynamic obstacle avoidance (TC04) and parametric robustness under simultaneous plant model uncertainty (TC05).
 
-The primary contributions of this work are as follows:
+Owing to the absence of HRM-based control methods for continuous dynamical systems, the main contributions of this work are as follows:
 \begin{enumerate}
-    \item The first empirical demonstration of an HRM-based architecture operating
-          as a closed-loop controller for a continuous nonlinear dynamic system, and
-          the first application of this architecture in a hybrid cascaded
-          configuration with a classical inner-loop regulator.
+    \item The first empirical demonstration of an HRM-based closed-loop controller for a continuous nonlinear dynamic system.
+          This also constitutes the first use of the architecture in a hybrid cascade with a classical inner-loop regulator.
 
-    \item A UHRC-PID hybrid architecture in which the neural outer loop produces
-          bounded, smooth attitude references consumed by a PD attitude regulator,
-          decoupling spatial reasoning from low-level stabilisation and resolving the
-          compounding error instability of flat end-to-end behavioural cloning.
+    \item A hybrid UHRC-PID architecture which generates bounded, smooth attitude references through a neural outer loop, for tracking by a PD attitude regulator.
+          This separation decouples spatial reasoning from low-level stabilization and resolves the instability caused by compounding errors in flat end-to-end behavioral cloning.
 
-    \item A formal stability analysis establishing inner-loop local exponential
-          stability via Lyapunov synthesis, ISS of the forced rotational subsystem,
-          and cascade UUB of the rotational state, with explicit identification of
-          the alignment condition required for goal convergence.
+    \item A formal stability analysis establishing Local Exponential Stability (LES) of the inner loop through Lyapunov synthesis, Input-to-State Stability (ISS) of the forced rotational subsystem and cascade Uniform Ultimate Boundedness (UUB) of the rotational state.
+          The alignment condition necessary for goal convergence is also identified.
 
-    \item A rigorous comparative empirical evaluation quantifying the
-          performance-robustness trade-offs across all five test cases, demonstrating
-          a 20\% success rate under dynamic obstacle conditions where both the pure
-          neural policy and the classical SLAM controller fail, and 20--30\% success
-          in constrained geometric environments.
+    \item A rigorous comparative empirical evaluation of the performance-robustness trade-offs across all five test cases.
+          The evaluation shows a 20\% success rate under dynamic obstacle conditions, where both the pure neural policy and the classical SLAM controller fail, together with 20--30\% success in constrained geometric environments.
 \end{enumerate}
 
-The remainder of this paper is organised as follows. 
-Section~\ref{sec:method} details the UHRC-PID architecture, observation
-representation, and training pipeline alongside the classical baseline design.
-Section~\ref{sec:stability} presents the formal cascade stability analysis.
-Section~\ref{sec:results} presents quantitative results across all five test cases.
-Section~\ref{sec:discussion} analyses the observed performance-robustness trade-off
-and its architectural origins. Section~\ref{sec:conclusion} concludes and outlines
-directions for future work.
+The remainder of this paper is organized as follows.
+The proposed UHRC-PID architecture, observation representation, training procedure and classical baseline are detailed in Section~\ref{sec:method}.
+The formal cascade stability analysis is then presented in Section~\ref{sec:stability}.
+Section~\ref{sec:results} reports the quantitative results for the five test cases, followed by a discussion of the performance-robustness trade-off and its architectural origins in Section~\ref{sec:discussion}.
+Lastly, Section~\ref{sec:conclusion} provides the concluding remarks and directions for future work.
+
 \section{Methodology}
 \label{sec:method}
 
-This section details the UHRC architecture, the classical hierarchical baseline against
-which it is evaluated, the expert data generation procedure, the behavioural cloning
-training pipeline, and the comparative evaluation protocol. All controllers share an
-identical 6-DOF quadrotor plant, described first.
+This section presents the UHRC architecture, the classical hierarchical baseline, the expert data generation and behavioral cloning procedures, and the comparative evaluation protocol.
+We first describe the common 6-DOF quadrotor plant used by all controllers.
 
 
 %
 \subsection{Quadrotor Dynamics Model}
 \label{sec:dynamics}
 
-The benchmark plant is a rigid-body quadrotor modelled in the East-North-Up (ENU)
-inertial frame $\mathcal{I}$ with body frame $\mathcal{B}$ fixed to the vehicle centre
-of mass. The state vector is
+The benchmark system is a rigid-body quadrotor modelled with respect to the East-North-Up (ENU) inertial frame $\mathcal{I}$ and a body frame $\mathcal{B}$ fixed at the vehicle's center of mass.
+Its state vector is defined as
 \begin{equation}
     \mathbf{x} = \bigl[\mathbf{r}_I^{\top},\;
                         \mathbf{v}_I^{\top},\;
@@ -320,23 +188,19 @@ of mass. The state vector is
     \in \mathbb{R}^{17},
     \label{eq:state}
 \end{equation}
-where $\mathbf{r}_I \in \mathbb{R}^3$ and $\mathbf{v}_I \in \mathbb{R}^3$ are the
-inertial position and velocity, $\mathbf{q}_{BI} \in \mathbb{R}^4$ is the unit quaternion
-representing the rotation from $\mathcal{I}$ to $\mathcal{B}$ satisfying $\|\mathbf{q}_{BI}\| = 1$, $\boldsymbol{\omega}_B
-\in \mathbb{R}^3$ is the angular velocity expressed in $\mathcal{B}$, and
-$\boldsymbol{\Omega} \in \mathbb{R}^4$ contains the four rotor speeds. However, the rotor speeds are included purely for measurement.
+where $\mathbf{r}_I \in \mathbb{R}^3$ and $\mathbf{v}_I \in \mathbb{R}^3$ denote the inertial position and velocity, respectively.
+The unit quaternion $\mathbf{q}_{BI} \in \mathbb{R}^4$ represents the rotation from $\mathcal{I}$ to $\mathcal{B}$ and satisfies $\|\mathbf{q}_{BI}\| = 1$, while $\boldsymbol{\omega}_B \in \mathbb{R}^3$ is the angular velocity expressed in $\mathcal{B}$ and $\boldsymbol{\Omega} \in \mathbb{R}^4$ contains the four rotor speeds.
+The rotor speeds are included solely for measurement.
 
-The control input is taken as the body-frame wrench
+We take the control input as the body-frame wrench
 \begin{equation}
     \mathbf{u} = \bigl[T,\; \tau_x,\; \tau_y,\; \tau_z\bigr]^{\top}
     \in \mathbb{R}^4,
 \end{equation}
-comprising the net collective thrust $T$ along the body $+z$ axis and roll, pitch, and
-yaw torques $\tau_x$, $\tau_y$, $\tau_z$ respectively. This formulation bypasses
-explicit rotor speed dynamics and assumes ideal wrench actuation, which is appropriate
-for the simulation study conducted here  \cite{hoffmann_quadrotor_2007}.
+which consists of the net collective thrust $T$ along the body $+z$ axis and the roll, pitch and yaw torques $\tau_x$, $\tau_y$ and $\tau_z$, respectively.
+The formulation assumes ideal wrench actuation, bypassing the explicit rotor speed dynamics, as is appropriate for the simulation study considered here \parencite{hoffmann_quadrotor_2007}.
 
-The translational dynamics are governed by Newton's second law in the inertial frame:
+Applying Newton's second law gives the inertial-frame translational dynamics as
 \begin{equation}
     m\dot{\mathbf{v}}_I =
         mg +
@@ -344,11 +208,9 @@ The translational dynamics are governed by Newton's second law in the inertial f
         C_d^{\text{lin}}\,\mathbf{v}_I,
     \label{eq:trans}
 \end{equation}
-where $m$ is the vehicle mass, $g$ is gravitational acceleration,
-$R_{IB} = R_{BI}^{\top}$ is the rotation matrix from $\mathcal{B}$ to $\mathcal{I}$
-derived from $\mathbf{q}_{BI}$, and $C_d^{\text{lin}} = \mathrm{diag}(c_x, c_y, c_z)$
-is the linear aerodynamic drag matrix. The rotational dynamics follow the
-Newton-Euler equations in the body frame:
+where $m$ denotes the vehicle mass and $g$ the gravitational acceleration.
+The matrix $R_{IB} = R_{BI}^{\top}$ describes the rotation from $\mathcal{B}$ to $\mathcal{I}$, obtained from $\mathbf{q}_{BI}$, and $C_d^{\text{lin}} = \mathrm{diag}(c_x, c_y, c_z)$ is the linear aerodynamic drag matrix.
+The body-frame rotational dynamics are described by the Newton-Euler equations,
 \begin{equation}
     J\dot{\boldsymbol{\omega}}_B =
         \boldsymbol{\tau}_B -
@@ -356,19 +218,15 @@ Newton-Euler equations in the body frame:
         C_d^{\text{rot}}\,\boldsymbol{\omega}_B,
     \label{eq:rot}
 \end{equation}
-where $J = \mathrm{diag}(I_{xx}, I_{yy}, I_{zz})$ is the diagonal inertia matrix,
-$\boldsymbol{\tau}_B = [\tau_x, \tau_y, \tau_z]^{\top}$, and
-$C_d^{\text{rot}} = \mathrm{diag}(d_x, d_y, d_z)$ is the rotational damping matrix.
-Attitude kinematics are propagated via the unit quaternion differential equation
+where $J = \mathrm{diag}(I_{xx}, I_{yy}, I_{zz})$ is the diagonal inertia matrix, $\boldsymbol{\tau}_B = [\tau_x, \tau_y, \tau_z]^{\top}$, and $C_d^{\text{rot}} = \mathrm{diag}(d_x, d_y, d_z)$ is the rotational damping matrix.
+The attitude evolves according to the unit quaternion differential equation,
 \begin{equation}
     \dot{\mathbf{q}}_{BI} =
         \tfrac{1}{2}\,(\mathbf{q}_{BI})\,\boldsymbol{\omega}_B,
 \end{equation}
-where $(\mathbf{q}) \in \mathbb{R}^{4\times3}$ is the standard quaternion kinematic
-matrix \parencite{shastry_development_2018}. The system is integrated using a
-fourth-order Runge-Kutta scheme at a fixed timestep of $\Delta t = 0.01$\,s, with
-quaternion renormalisation applied after each step. Physical parameters are listed in
-Table~\ref{tab:quad_params}.
+where $(\mathbf{q}) \in \mathbb{R}^{4\times3}$ denotes the standard quaternion kinematic matrix \parencite{shastry_development_2018}.
+A fourth-order Runge-Kutta scheme is used to integrate the system at a fixed timestep of $\Delta t = 0.01$\,s, with the quaternion renormalized after each step.
+The employed physical parameters are summarized in Table~\ref{tab:quad_params}.
 
 \begin{table}[ht]
 \centering
@@ -393,77 +251,43 @@ Rotational drag  & $\mathrm{diag}(C_d^{\text{rot}})$ & [0.02, 0.02, 0.02] & N$\c
 \end{table}
 
 
-\subsection{Classical Hierarchical Baseline}
-\label{sec:baseline}
-
-
-The baseline is a four-stage classical hierarchical controller implementing the full
-supervisory-regulatory decomposition described in the literature
-\parencite{sanders_hierarchical_1998, scattolini_hierarchical_2007}. It serves as a
-representative instance of the architecture class the UHRC is designed to replace.
-
-An Inertial Navigation System Extended Kalman Filter (INSEKF) fuses GPS position and
-Attitude and Heading Reference System (AHRS) orientation estimates at 10\,Hz to
-produce a pose estimate $[\hat{\mathbf{r}}_I, \hat{\mathbf{q}}_{BI}]$. LiDAR
-odometry is provided by an Iterative Closest Point (ICP) registration pipeline
-operating on 2D point cloud keyframes, accumulated into a pose graph optimised via
-Levenberg-Marquardt at fixed intervals of 500 nodes \parencite{gupta_simultaneous_2022,
-milijas_comparison_2021}.
-
-A collision-free path is computed by the A* algorithm on a 2D occupancy grid
-constructed by projecting LiDAR returns onto the ground plane at 2.0\,m cell
-resolution. The grid spans the drone's estimated flight level within a height band
-of $\pm 2.0$\,m. Path feasibility is guaranteed if a collision-free grid path exists
-\parencite{zhou_review_2021}; otherwise the controller holds the previously valid path.
-
-
-A pure pursuit tracker with a fixed lookahead distance of $L_d = 0.8$\,m translates
-the planned waypoint sequence into position setpoints at 10\,Hz
-\parencite{huang_path_2020}.
-
-
-A cascaded PID structure realises the position setpoints. The outer position loop
-maps horizontal position errors to desired roll and pitch references
-$[\phi_d, \theta_d]$ via the standard small-angle coupling
-$\theta_d = a_x^{\mathrm{des}} / g$, $\phi_d = -a_y^{\mathrm{des}} / g$.
-The inner attitude loop generates body wrench commands from attitude and altitude
-errors using derivative-filtered PID controllers on each axis
-\parencite{ren_efficient_2025,bouabdallah_design_2007}.
-
 
 \subsection{UHRC Architecture}
 \label{sec:uhrc_arch}
 
-The UHRC-PID is a two-level recurrent transformer that adapts the HRM architecture
-\parencite{wang_hierarchical_2025} to continuous closed-loop control. Planning and stabilization are decoupled, where the UHRC and PID handles respectively.
-At each timestep, the unified modules of the UHRC generate a 2-dimensional attidtude reference encoding strategic
-intent. These subgoals are then fed into the lower level PID, which then produce the required torque wrench. 
-In the UHRC, the modules maintain persistent memory through a rolling carry buffer that replaces the HRM's per-problem hidden state,
-enabling temporal reasoning across the full episode horizon.
+The UHRC-PID is a two-level recurrent transformer, which adapts the HRM architecture proposed by \textcite{wang_hierarchical_2025} to continuous closed-loop control.
+Planning and stabilization are decoupled and assigned to the UHRC and PID, respectively.
+At each timestep, the coupled UHRC modules produce a 2-dimensional attitude reference which expresses the strategic intent.
+These subgoals are supplied to the lower-level PID to generate the required torque wrench.
+The UHRC modules retain their memory in a rolling carry buffer, replacing the per-problem hidden state of the HRM.
+This permits temporal reasoning throughout the episode horizon.
 
-The UHRC maps the 45-dimensional body-frame observation $\mathbf{o}$ to a commanded attitude intent vector:
+The 45-dimensional body-frame observation $\mathbf{o}$ is mapped by the UHRC to the commanded attitude intent vector
 \begin{equation}
     \mathbf{u}_{\mathrm{ref}} = [\phi_{\mathrm{ref}}, \theta_{\mathrm{ref}}]^{\top} \in \mathbb{R}^2.
 \end{equation}
-The yaw reference is explicitly excluded ($\psi_{\mathrm{ref}} = 0$) because the body-frame observations are heading-invariant and the expert policy strictly commands zero yaw during transit. Furthermore, the hover thrust bias is initialized to $0.0$, as the model directly predicts angular deviations rather than thrust forces.
+The yaw reference is excluded ($\psi_{\mathrm{ref}} = 0$), since the body-frame observations are heading-invariant and the expert commands zero yaw throughout transit.
+The hover thrust bias is also initialized to $0.0$, as the model predicts angular deviations directly, rather than thrust forces.
 
-This attitude intent is subsequently passed to a classical inner-loop PID regulator. The inner loop computes the necessary body wrench $\mathbf{u} = [T, \tau_x, \tau_y, \tau_z]^{\top}$ to track the UHRC's commanded roll and pitch, while simultaneously regulating altitude and yaw:
+The resulting attitude intent is supplied to a classical inner-loop PID regulator.
+This regulator computes the body wrench $\mathbf{u} = [T, \tau_x, \tau_y, \tau_z]^{\top}$ required to track the commanded roll and pitch, while also regulating altitude and yaw:
 \begin{equation}
     \tau_i(t) = K_{p,i} e_i(t) + K_{i,i} \int_{0}^{t} e_i(\tau) d\tau + K_{d,i} \frac{d e_i(t)}{dt}, \quad i \in \{\phi, \theta\}
 \end{equation}
 where $e_\phi(t) = \phi_{\mathrm{ref}}(t) - \phi(t)$ and $e_\theta(t) = \theta_{\mathrm{ref}}(t) - \theta(t)$. 
 
-By confining the neural network to the outer loop, the UHRC effectively bypasses the high-frequency stabilization task. This ensures that the generated spatial trajectories are translated into dynamically feasible actuator commands by the inner-loop PID, structurally guaranteeing local asymptotic stability of the attitude dynamics while retaining the multi-scale spatial reasoning of the HRM.
+Restricting the neural network to the outer loop removes the high-frequency stabilization task from the UHRC.
+The inner-loop PID then converts the generated spatial trajectories into dynamically feasible actuator commands.
+Thus, the architecture guarantees local asymptotic stability of the attitude dynamics while preserving the multiscale spatial reasoning capabilities of the HRM.
 
 
 \subsubsection{Observation Representation}
 \label{sec:obs}
 
-All observations are expressed in the body frame $\mathcal{B}$. This choice renders
-the observation invariant to global heading and position, reducing the domain of the
-mapping the controller must learn: an identical avoidance manoeuvre is appropriate
-regardless of the vehicle's absolute world-frame orientation \parencite{liang_nonlinear_2018}.
-The 45-dimensional observation vector is
+The observations are expressed entirely in the body frame $\mathcal{B}$.
+This representation is invariant to global heading and position, reducing the domain of the mapping to be learned.
+That is, the same avoidance maneuver applies independently of the vehicle's absolute orientation in the world frame \parencite{liang_nonlinear_2018}.
+We define the 45-dimensional observation vector as
 
 \begin{equation}
     \mathbf{o} =
@@ -478,41 +302,28 @@ The 45-dimensional observation vector is
     \in \mathbb{R}^{45},
     \label{eq:obs}
 \end{equation}
-where $\mathbf{v}_B = R_{BI}\mathbf, {v}_I$ is the body-frame translational velocity,
-$\boldsymbol{\omega}_B$ is the angular velocity, $\mathbf{g}_B = R_{BI}[0, 0, -g]^{\top}$
-isthe gravity vector,
-$\Delta\mathbf{r}_B = R_{BI}(\mathbf{r}_{\mathrm{goal}} - \mathbf{r}_I)$ is the
-goal displacement clipped to a maximum range $r_{\max}^{\mathrm{goal}} = 20$\,m,
-$d_{\mathrm{norm}} = \min(\|\Delta\mathbf{r}_B\|, 20) / 20$ is the normalised
-goal distance, and $\mathbf{r}_{\mathrm{lidar}} \in [0, 1]^{32}$ is a 32-ray
-planar LiDAR scan with field of view $\pi$\,rad and maximum range 5.0\,m,
-normalised to the unit interval.
+where $\mathbf{v}_B = R_{BI}\mathbf, {v}_I$ denotes the body-frame translational velocity, $\boldsymbol{\omega}_B$ the angular velocity and $\mathbf{g}_B = R_{BI}[0, 0, -g]^{\top}$ the gravity vector.
+The goal displacement $\Delta\mathbf{r}_B = R_{BI}(\mathbf{r}_{\mathrm{goal}} - \mathbf{r}_I)$ is clipped to a maximum range of $r_{\max}^{\mathrm{goal}} = 20$\,m, and $d_{\mathrm{norm}} = \min(\|\Delta\mathbf{r}_B\|, 20) / 20$ is the normalized goal distance.
+The term $\mathbf{r}_{\mathrm{lidar}} \in [0, 1]^{32}$ denotes a 32-ray planar LiDAR scan, with field of view $\pi$\,rad and maximum range 5.0\,m, normalized to the unit interval.
 
-The separate scalar $d_{\mathrm{norm}}$ is included deliberately, without it,
-the goal displacement vector $\Delta\mathbf{r}_B$ loses magnitude information as the
-drone approaches the goal, causing the controller to overshoot. At runtime, the
-observation is standardised by precomputed dataset statistics before being passed
-to the model.
+The scalar $d_{\mathrm{norm}}$ is included separately to retain goal-distance information.
+Without this term, the goal displacement vector $\Delta\mathbf{r}_B$ loses magnitude information as the drone approaches the goal, resulting in overshoot.
+Before being supplied to the model at runtime, the observation is standardized using precomputed dataset statistics.
 
 
 \subsubsection{Dual-Stream Input Encoder}
 \label{sec:encoder}
 
-The 13 scalar kinematic features $[\mathbf{v}_B^{\top}, \boldsymbol{\omega}_B^{\top},
-\mathbf{g}_B^{\top}, \Delta\mathbf{r}_B^{\top}, d_{\mathrm{norm}}]$ and the 32-ray
-LiDAR scan are processed by separate encoder branches before fusion.
+Separate encoder branches process the 13 scalar kinematic features $[\mathbf{v}_B^{\top}, \boldsymbol{\omega}_B^{\top}, \mathbf{g}_B^{\top}, \Delta\mathbf{r}_B^{\top}, d_{\mathrm{norm}}]$ and the 32-ray LiDAR scan before their outputs are fused.
 
-A two-layer MLP first projects the 13-dimensional input to
-$\mathbb{R}^{h/2}$ through a scaled hyperbolic tangent:
+The 13-dimensional input is first projected to $\mathbb{R}^{h/2}$ by a two-layer Multilayer Perceptron (MLP), using the scaled hyperbolic tangent
 \begin{equation}
     \mathbf{s} = W_2 \tanh\!\bigl(\sqrt{H}\cdot W_1 \mathbf{o}_{\mathrm{kin}} + \mathbf{b}_1\bigr),
 \end{equation}
-where $h = 128$ is the model hidden dimension. The scaling factor $\sqrt{H}$
-expands the effective dynamic range of kinematic inputs into the region where $\tanh$
-provides informative gradients, preventing early saturation during training.
+where $h = 128$ denotes the model's hidden dimension.
+The scaling factor $\sqrt{H}$ expands the effective dynamic range of the kinematic inputs into the region where $\tanh$ supplies informative gradients, thereby preventing early saturation during training.
 
-The 32 normalised range returns are processed as a 1D signal
-by a two-stage convolutional encoder:
+A two-stage convolutional encoder processes the 32 normalized range returns as a 1D signal,
 \begin{equation}
     \mathbf{l} = W_{\mathrm{proj}}\,
         \mathrm{Flatten}\!\bigl(
@@ -520,118 +331,102 @@ by a two-stage convolutional encoder:
                 \sigma(\mathrm{Conv}_{k=5}^{16}(\mathbf{o}_{\mathrm{lidar}})))\bigr)
         \bigr),
 \end{equation}
-where $\sigma$ denotes the SiLU activation, $\mathrm{Conv}_{k}^{c}$ denotes a
-1D convolution with $c$ output channels and kernel size $k$ (same padding), and
-$W_{\mathrm{proj}} \in \mathbb{R}^{(h/2) \times 512}$ projects the flattened
-$16 \times 32 = 512$ feature map to $\mathbb{R}^{h/2}$.
+where $\sigma$ is the Sigmoid Linear Unit (SiLU) activation and $\mathrm{Conv}_{k}^{c}$ denotes a 1D convolution with $c$ output channels, kernel size $k$ and same padding.
+The projection $W_{\mathrm{proj}} \in \mathbb{R}^{(h/2) \times 512}$ maps the flattened $16 \times 32 = 512$ feature map to $\mathbb{R}^{h/2}$.
 
-The two $h/2$-dimensional branch outputs are concatenated and
-linearly projected to a single embedding $\mathbf{e}_t = W_f[\mathbf{s}; \mathbf{l}]
-\in \mathbb{R}^{h}$ representing the current observation at timestep $t$.
+The two $h/2$-dimensional branch outputs are concatenated and linearly projected to the single embedding $\mathbf{e}_t = W_f[\mathbf{s}; \mathbf{l}] \in \mathbb{R}^{h}$, representing the observation at timestep $t$.
 
 
 \subsubsection{Transformer Reasoning Blocks}
 \label{sec:blocks}
 
-Both the $H$-module and $L$-module are composed of stacked \texttt{UHRCBlock} layers,
-each implementing a standard pre-normalised transformer encoder block:
+The $H$- and $L$-modules each comprise stacked \texttt{UHRCBlock} layers, which implement the standard pre-normalized transformer encoder block
 \begin{align}
     \mathbf{z}' &= \mathrm{RMSNorm}\bigl(\mathbf{z} + \mathrm{MHA}(\mathbf{z})\bigr),
     \label{eq:attn_block} \\
     \mathbf{z}'' &= \mathrm{RMSNorm}\bigl(\mathbf{z}' + \mathrm{SwiGLU}(\mathbf{z}')\bigr),
     \label{eq:mlp_block}
 \end{align}
-where $\mathrm{MHA}(\cdot)$ is non-causal multi-head self-attention with
-$n_h = 4$ heads and head dimension $d_h = h / n_h = 32$, and $\mathrm{SwiGLU}(\cdot)$
-is the gated feed-forward network
+where $\mathrm{MHA}(\cdot)$ denotes non-causal multi-head self-attention with $n_h = 4$ heads and head dimension $d_h = h / n_h = 32$.
+The gated feed-forward network $\mathrm{SwiGLU}(\cdot)$ is defined by
 \begin{equation}
     \mathrm{SwiGLU}(\mathbf{z}) =
         W_{\downarrow}\bigl(\mathrm{SiLU}(W_g \mathbf{z}) \odot W_u \mathbf{z}\bigr),
 \end{equation}
-with intermediate dimension $d_{\mathrm{ff}} = 512$. Non-causal attention is appropriate here because the carry
-represents a temporal history rather than an autoregressive prediction task, each
-position can attend to all other positions, including more recent ones.
+with intermediate dimension $d_{\mathrm{ff}} = 512$.
+Since the carry contains a temporal history, rather than an autoregressive prediction sequence, non-causal attention is appropriate.
+Each position may therefore attend to every other position, including those corresponding to more recent observations.
 
-Rotary Positional Encoding (RoPE) is applied independently to the query and key
-matrices within each attention head, encoding the relative age of each position in
-the carry buffer. For a sequence of length $T$ and head dimension $d_h$, the
-rotary frequencies are
+Rotary Positional Encoding (RoPE) is applied separately to the query and key matrices of each attention head to encode the relative age of positions in the carry buffer.
+For sequence length $T$ and head dimension $d_h$, the rotary frequencies are defined as
 \begin{equation}
     \theta_i = \frac{1}{10000^{2i/d_h}}, \quad i = 0, 1, \ldots, d_h/2 - 1,
 \end{equation}
-RoPE is preferred over learned absolute
-positional embeddings because it generalises to sequence positions not seen during
-training \parencite{wang_hierarchical_2025}.
+RoPE is used in place of learned absolute positional embeddings because it generalizes to sequence positions outside those encountered during training \parencite{wang_hierarchical_2025}.
 
 
 \subsubsection{Persistent Temporal Carry Buffer}
 \label{sec:carry}
 
-In the original HRM, hidden states $\mathbf{z}_H$ and $\mathbf{z}_L$ are
-re-initialised for each input problem. In closed-loop control, the controller must
-maintain situational awareness across successive timesteps, tracking velocity history,
-recognising developing obstacle geometries, and anticipating trajectory evolution.
-The UHRC therefore treats the hidden states as persistent rolling buffers:
+The original HRM re-initializes the hidden states $\mathbf{z}_H$ and $\mathbf{z}_L$ for each input problem.
+Closed-loop control, however, requires the retention of information across successive timesteps to track velocity history, recognize developing obstacle geometries and anticipate the evolution of the trajectory.
+Accordingly, the UHRC represents its hidden states as persistent rolling buffers,
 \begin{equation}
     \mathbf{z}_{H}, \mathbf{z}_{L} \in \mathbb{R}^{B \times C \times h},
 \end{equation}
-where $B$ is the batch size (1 at inference) and $C = 16$ is the carry length
-. At each timestep, the new observation embedding
-$\mathbf{e}_t$ is appended to the buffer and the oldest entry is discarded:
+where $B$ denotes the batch size (1 at inference) and $C = 16$ the carry length.
+At each timestep, the observation embedding $\mathbf{e}_t$ is appended and the oldest buffer entry is removed:
 \begin{equation}
     \mathrm{roll\_carry}(\mathbf{z}, \mathbf{e}_t) =
         \bigl[\mathbf{z}_{:,1:C,:};\; \mathbf{e}_t^{\top}\bigr]
     \in \mathbb{R}^{B \times C \times h},
 \end{equation}
-providing a fixed-length sliding window of temporal context without unbounded memory
-growth. 
+thereby retaining a fixed-length window of temporal context without unbounded memory growth.
 
 
 \subsubsection{H-L Mutual Refinement and One-Step Gradient Approximation}
 \label{sec:hl_cycles}
 
-The $H$- and $L$-modules interact through $H_\mathrm{cyc} = 2$ outer cycles each
-containing $L_\mathrm{cyc} = 2$ inner $L$-module passes. At each step, the full
-sequence $\mathbf{z}_H^{(t)} \in \mathbb{R}^{B \times 17 \times h}$ is formed by
-concatenating the carry tokens with the current observation embedding:
+The $H$- and $L$-modules are coupled through $H_\mathrm{cyc} = 2$ outer cycles, with $L_\mathrm{cyc} = 2$ inner $L$-module passes per cycle.
+At each step, concatenating the carry tokens and current observation embedding gives the full sequence $\mathbf{z}_H^{(t)} \in \mathbb{R}^{B \times 17 \times h}$:
 \begin{equation}
     \mathbf{z}_H^{(t)} = \bigl[\mathbf{Z}_H;\; \mathbf{e}_t^{\top}\bigr], \quad
     \mathbf{z}_L^{(t)} = \bigl[\mathbf{Z}_L;\; \mathbf{e}_t^{\top}\bigr].
 \end{equation}
-An observation re-injection tensor
-$\mathbf{I}_{\mathrm{obs}} \in \mathbb{R}^{B \times 17 \times h}$ is constructed
-with zeros at carry positions and $\mathbf{e}_t$ at position 16, ensuring the raw
-observation is available as an additive bias at every $L$-module call \parencite{wang_hierarchical_2025}.
+The observation re-injection tensor $\mathbf{I}_{\mathrm{obs}} \in \mathbb{R}^{B \times 17 \times h}$ is constructed with zeros at the carry positions and $\mathbf{e}_t$ at position 16.
+Thus, the raw observation remains available as an additive bias during every $L$-module call \parencite{wang_hierarchical_2025}.
 
-To bound the gradient graph depth and maintain training stability, the UHRC adopts
-the one-step gradient approximation mirrored in \parencite{wang_hierarchical_2025}. all but the final module call in
-the refinement cycle are computed under \texttt{torch.no\_grad()}, and only a single
-$L$-pass followed by a single $H$-pass contribute to the gradient. 
+The one-step gradient approximation used in \textcite{wang_hierarchical_2025} is employed to bound the depth of the gradient graph and preserve training stability.
+All module calls preceding the final call in the refinement cycle are evaluated under \texttt{torch.no\_grad()}, such that only a single $L$-pass followed by a single $H$-pass contributes to the gradient.
 
 
-\subsubsection{Subgoal Generation, Gated Injection, and Attitude R Output}
+\subsubsection{Subgoal Generation, Gated Injection, and Attitude Reference Output}
 \label{sec:subgoal}
 
-Following the final $H$-module update, the terminal hidden state $\mathbf{z}_H[:,16,:] \in \mathbb{R}^{B \times h}$ (the most recent position in the carry sequence) is decoded by a two-layer MLP planning head into a 2-dimensional body-frame horizontal velocity subgoal:
+After the final $H$-module update, a two-layer MLP planning head decodes the terminal hidden state $\mathbf{z}_H[:,16,:] \in \mathbb{R}^{B \times h}$, corresponding to the most recent position in the carry sequence, into a 2-dimensional horizontal velocity subgoal in the body frame:
 \begin{equation}
     \hat{\mathbf{v}}_{\mathrm{sub}} = W_2\,\mathrm{SiLU}(W_1 \mathbf{z}_H[:,16,:]) \in \mathbb{R}^{B \times 2}.
 \end{equation}
-This subgoal encodes the H-module's strategic intent as a desired velocity vector $[v_x, v_y]$ in the body frame, providing a physically interpretable interface between the two modules. The vertical component $v_z$ is deliberately omitted, as altitude tracking is effectively decoupled and governed by the independent altitude regulator.
+This subgoal represents the H-module's strategic intent through the desired body-frame velocity vector $[v_x, v_y]$, giving a physically interpretable interface between the modules.
+The vertical component $v_z$ is omitted because altitude tracking is effectively decoupled and controlled by the independent altitude regulator.
 
-The subgoal is injected into the $L$-module through a gated additive mechanism designed to modulate the reactive representation without overriding it:
+A gated additive mechanism injects the subgoal into the $L$-module, modulating its reactive representation without overriding it:
 \begin{align}
     \mathbf{g} &= \sigma\bigl(W_g \hat{\mathbf{v}}_{\mathrm{sub}} + \mathbf{b}_g\bigr) \in (0,1)^{B \times h}, \label{eq:gate} \\
     \mathbf{c} &= \bigl(W_p \hat{\mathbf{v}}_{\mathrm{sub}}\bigr) \odot \mathbf{g} \in \mathbb{R}^{B \times h}, \label{eq:context}
 \end{align}
-where $\sigma$ is the element-wise sigmoid. The gate bias is initialised to $\mathbf{b}_g = +2.0$, so that $\sigma(+2) \approx 0.88$ at the start of training, keeping the gate mostly open and allowing the subgoal signal to propagate freely before the planning head has converged. The gated context is broadcast across the carry sequence and the $L$-module performs a final two-layer attention pass:
+where $\sigma$ denotes the element-wise sigmoid.
+The gate bias is initialized to $\mathbf{b}_g = +2.0$, giving $\sigma(+2) \approx 0.88$ at the beginning of training.
+The gate therefore remains mostly open, permitting the subgoal signal to propagate freely before convergence of the planning head.
+The gated context is broadcast over the carry sequence, after which the $L$-module carries out a final two-layer attention pass:
 \begin{equation}
     \mathbf{z}_L^{\mathrm{final}} = \mathcal{L}\bigl(\mathbf{z}_L + \mathbf{c}\cdot\mathbf{1}_{17}^{\top}\bigr),
 \end{equation}
-from which the attitude reference action is decoded from the terminal position:
+The attitude reference action is then decoded from the terminal position:
 \begin{equation}
     \hat{\mathbf{u}} = W_a\,\mathbf{z}_L^{\mathrm{final}}[:,16,:] = [\hat{\phi}_{\mathrm{ref}},\; \hat{\theta}_{\mathrm{ref}}]^{\top} \in \mathbb{R}^{2}.
 \end{equation}
-The full architectural configuration is summarised in Table~\ref{tab:arch_config}.
+Table~\ref{tab:arch_config} summarizes the complete architectural configuration.
 
 \begin{table}[ht]
 \centering
@@ -664,33 +459,22 @@ Hover thrust bias     & $F_z^{(0)}$         & 9.81\,N \\
 \label{sec:datagen}
 
 
-Training data are generated by rolling out an expert policy comprising an A* path
-planner, a pure-pursuit tracker, and the cascaded PID attitude controller on 500
-successful simulated episodes at $\Delta t = 0.01$\,s per step
-\parencite{levine_end--end_2016, le_mero_survey_2022}.
+The training data comprise 500 successful simulated episodes, generated by an expert policy consisting of an A* path planner, a pure-pursuit tracker and the cascaded PID attitude controller, with $\Delta t = 0.01$\,s per step \parencite{levine_end--end_2016, le_mero_survey_2022}.
 
 
-At the start of each episode, a 2D occupancy grid is constructed at a resolution of
-$r_{\mathrm{grid}} = 0.25$\,m per cell, spanning the convex hull of the start
-position, goal position, and all obstacle extents with a 2.0\,m margin. Circular
-obstacles are inflated by $r_{\mathrm{inf}} = 0.25$\,m to account for vehicle body
-radius. The A* algorithm searches an 8-connected neighbourhood using the octile
-heuristic, guaranteeing the shortest collision-free path if one exists
-\parencite{zhou_review_2021}. Episodes for which no path exists are discarded before
-simulation begins.
+At the beginning of each episode, a 2D occupancy grid is formed with resolution $r_{\mathrm{grid}} = 0.25$\,m per cell.
+The grid spans the convex hull of the start position, goal position and all obstacle extents, together with a 2.0\,m margin.
+Circular obstacles are inflated by $r_{\mathrm{inf}} = 0.25$\,m to account for the vehicle's body radius.
+An A* search over an 8-connected neighborhood, using the octile heuristic, guarantees the shortest collision-free path when one exists \parencite{zhou_review_2021}.
+Episodes without a feasible path are discarded before simulation.
 
 
-The planned path is smoothed by three passes of a cubic averaging filter and tracked
-by a pure-pursuit controller with lookahead $L_d = 1.0$\,m and maximum speed
-$V_{\max} = 2.0$\,m/s. Speed is linearly ramped down to $0.3$\,m/s within 2\,m of
-the goal. Upon entering a $0.1$\,m goal acceptance radius, the tracker issues a zero
-velocity command for 150 additional steps (1.5\,s), demonstrating the hover
-termination behaviour to the model.
+Three passes of a cubic averaging filter smooth the planned path, which is then tracked by a pure-pursuit controller with lookahead $L_d = 1.0$\,m and maximum speed $V_{\max} = 2.0$\,m/s.
+Within 2\,m of the goal, the commanded speed is reduced linearly to $0.3$\,m/s.
+Once the vehicle enters the $0.1$\,m goal acceptance radius, a zero velocity command is maintained for a further 150 steps (1.5\,s), demonstrating the hover termination behavior to the model.
 
 
-To promote policy generalisation beyond the default $+x$-direction transit, six
-episode categories are sampled according to the distribution in
-Table~\ref{tab:episode_types}.
+To promote generalization of the policy beyond the default $+x$-direction transit, six categories of episodes are sampled using the distribution in Table~\ref{tab:episode_types}.
 
 \begin{table}[ht]
 \centering
@@ -710,50 +494,42 @@ Tight gap   & 10\% & Symmetric wall pair with 0.5--0.8\,m half-gap \\
 \end{tabular}
 \end{table}
 
-The omnidirectional episodes are critical for eliminating the directional bias
-intrinsic to the dominant $+x$-transit training distribution: without them, the
-learned policy fails to navigate in the $-x$ or $\pm y$ directions.
+The omnidirectional episodes are necessary to eliminate the directional bias of the predominantly $+x$-transit training distribution.
+In their absence, the learned policy fails to navigate in the $-x$ or $\pm y$ directions.
 
-Every 50 steps with probability 0.3, the current state receives a Gaussian velocity
-perturbation ($\sigma = 0.2$\,m/s) and a small random yaw offset
-($|\delta\psi| \leq 0.15$\,rad). This DAgger-style augmentation implemented by \cite{levine_end--end_2016},
-exposes the expert to a wider distribution of states and prevents the compounding
-error pathology characteristic of pure behavioural cloning.
+Every 50 steps, a Gaussian velocity perturbation ($\sigma = 0.2$\,m/s) and a small random yaw offset ($|\delta\psi| \leq 0.15$\,rad) are applied to the current state with probability 0.3.
+This Dataset Aggregation (DAgger)-style augmentation, implemented by \textcite{levine_end--end_2016}, broadens the distribution of states encountered by the expert and prevents the compounding errors associated with pure behavioral cloning.
 
 
-Episodes are included only if: (i) the drone reached the goal without collision;
-(ii) the goal distance decreased monotonically over coarse 100-step windows; and
-(iii) the average velocity subgoal magnitude during the final hover phase was below
-$0.3$\,m/s. To render the expert signal learnable by the neural policy, post-processing is applied to the raw A* tracker outputs. High-frequency discontinuities in the expert commands are smoothed using an Exponential Moving Average (EMA) filter with smoothing factors $\alpha_{\mathrm{act}} = 0.12$ and $\alpha_{\mathrm{sub}} = 0.08$. 
-Furthermore, to demonstrate stable termination, a hover deadband override is enforced, clamping $\phi_{\mathrm{ref}}$ and $\theta_{\mathrm{ref}}$ to zero when the vehicle enters the 0.1\,m goal acceptance radius. 
-Maximum attitude commands are strictly clamped to $\pm 30^{\circ}$ to guarantee the demonstrations remain within the feasible limits of the low-level PID.
+An episode is retained only when (i) the drone reaches the goal without collision, (ii) the goal distance decreases monotonically over coarse 100-step windows and (iii) the mean magnitude of the velocity subgoal in the final hover phase is below $0.3$\,m/s.
+The raw A* tracker outputs are post-processed to make the expert signal learnable by the neural policy.
+An Exponential Moving Average (EMA) filter smooths high-frequency discontinuities in the expert commands, using smoothing factors $\alpha_{\mathrm{act}} = 0.12$ and $\alpha_{\mathrm{sub}} = 0.08$.
+A hover deadband override also demonstrates stable termination by clamping $\phi_{\mathrm{ref}}$ and $\theta_{\mathrm{ref}}$ to zero upon entry into the 0.1\,m goal acceptance radius.
+The attitude commands are strictly limited to $\pm 30^{\circ}$, ensuring that the demonstrations remain within the feasible limits of the low-level PID.
 
-\subsection{Behavioural Cloning Training}
+\subsection{Behavioral Cloning Training}
 \label{sec:training}
 
 
 \subsubsection{Dataset Construction}
 
-The \texttt{ControlDataset} constructs sequence windows of length
-$T_{\mathrm{seq}} = 8$ timesteps from the stored episode data. Windows never cross
-episode boundaries. Windows that begin within the first $T_{\mathrm{seq}} - 1$ steps
-of an episode are left-padded with zeros. The 45-dimensional observations are
-$z$-scored using dataset-wide mean and standard deviation statistics. Attitude references
- are retained in their raw physical units. The dataset is split into training and validation subsets by
-episode, with 10\% of episodes reserved for validation.
+The \texttt{ControlDataset} forms sequence windows of $T_{\mathrm{seq}} = 8$ timesteps from the stored episodes.
+Each window is confined to a single episode, and windows beginning within its first $T_{\mathrm{seq}} - 1$ steps are left-padded with zeros.
+The 45-dimensional observations are $z$-scored using the dataset-wide mean and standard deviation, while the attitude references remain in their original physical units.
+Training and validation subsets are separated by episode, with 10\% reserved for validation.
 
 \subsubsection{Loss Function}
 \label{sec:loss_function}
 
-The total loss is a weighted sum of the action and subgoal tracking errors, modulated by a spatial proximity multiplier:
+The total loss is defined as a weighted sum of the action and subgoal tracking errors, scaled by a spatial proximity multiplier:
 \begin{equation}
     \mathcal{L} = \gamma_{\mathrm{spat}} \Bigl( \mathcal{L}_{\mathrm{act}} + \alpha_s \mathcal{L}_{\mathrm{sub}} + \alpha_t \mathcal{L}_{\mathrm{trk}} \Bigr),
 \end{equation}
-where the loss hyperparameters are set to $\alpha_s = 0.1$ and $\alpha_t = 0.0$. The spatial weighting factor, $\gamma_{\mathrm{spat}}$, applies a $10\times$ penalty multiplier 
-when the vehicle falls within a normalized distance threshold of the goal.
+where $\alpha_s = 0.1$ and $\alpha_t = 0.0$ are the selected loss hyperparameters.
+The spatial factor $\gamma_{\mathrm{spat}}$ increases the penalty by $10\times$ when the vehicle is within a normalized distance threshold of the goal.
 
 
-The action imitation loss is a weighted Mean Squared Error (MSE) on the attitude vector:
+The action imitation loss is formulated as a weighted Mean Squared Error (MSE) of the attitude vector,
 \begin{equation}
     \mathcal{L}_{\mathrm{act}} = 
         \Bigl\langle 
@@ -762,8 +538,8 @@ The action imitation loss is a weighted Mean Squared Error (MSE) on the attitude
             \bigl(\hat{\mathbf{u}}_{\mathrm{ref}} - \mathbf{u}_{\mathrm{ref}}^*\bigr) 
         \Bigr\rangle,
 \end{equation}
-with the normalized action weights initialized evenly to $\mathbf{w}_a = [10.0, 10.0]$.
-The subgoal supervision loss evaluates the intermediate horizontal velocity intent identically:
+where the normalized action weights are initialized equally to $\mathbf{w}_a = [10.0, 10.0]$.
+The intermediate horizontal velocity intent is supervised through the corresponding subgoal loss:
 \begin{equation}
     \mathcal{L}_{\mathrm{sub}} = 
         \Bigl\langle 
@@ -772,7 +548,7 @@ The subgoal supervision loss evaluates the intermediate horizontal velocity inte
             \bigl(\hat{\mathbf{v}}_{\mathrm{sub}} - \mathbf{v}_{\mathrm{sub}}^*\bigr) 
         \Bigr\rangle,
 \end{equation}
-with corresponding subgoal weights $\mathbf{w}_s = [10.0, 10.0]$.
+where $\mathbf{w}_s = [10.0, 10.0]$ gives the corresponding subgoal weights.
 
 %REPLACE THIS TERM FOR THE UHRC-PID
 
@@ -780,18 +556,18 @@ with corresponding subgoal weights $\mathbf{w}_s = [10.0, 10.0]$.
 
 %REPLACE THIS TERM FOR THE UHRC-PID
 
-\subsubsection{Optimiser and Schedule}
+\subsubsection{Optimizer and Schedule}
 
 \subsubsection{Training Configuration and Episodic Streaming}
 \label{sec:training_config}
 
-The UHRC is trained using an episodic streaming mechanism. The model is optimized using AdamW over a total of $20$ epochs. 
-The learning rate schedule incorporates a brief linear warmup period of $5$ epochs before transitioning to a cosine annealing decay. 
+The UHRC is trained through episodic streaming, with AdamW optimization over $20$ epochs.
+The learning rate follows a linear warmup over $5$ epochs, followed by cosine annealing decay.
 
-A base weight decay of $1 \times 10^{-2}$ is applied to penalize large weights and prevent overfitting. 
+A base weight decay of $1 \times 10^{-2}$ penalizes large weights to prevent overfitting.
 \begin{table}[ht]
 \centering
-\caption{Behavioural cloning training configuration.}
+\caption{Behavioral cloning training configuration.}
 \label{tab:train_config}
 \begin{tabular}{lll}
 \hline
@@ -818,282 +594,711 @@ Subgoal weights              & $\mathbf{w}_s$             & [10.0, 10.0] \\
 \label{sec:eval_protocol}
 
 
-Both controllers are evaluated across five structured test cases (TC01--TC05) of
-increasing environmental complexity. To ensure a fair comparison, both controllers
-receive ideal state feedback from the same simulation state. Each
-test case is repeated for $N = 30$ randomised Monte Carlo trials and metrics are
-averaged over successful and failed trials.
+The controllers are compared over five structured test cases (TC01--TC05) of increasing environmental complexity.
+Both receive ideal state feedback from the same simulation state to ensure a fair comparison.
+Each case comprises $N = 30$ randomized Monte Carlo trials, with performance metrics averaged over successful and failed trials.
 
-\textbf{TC01 -- Open Transit.} Straight-line goal-seeking in an obstacle-free
-environment, establishing baseline trajectory tracking performance.
+\textbf{TC01 -- Open Transit.} An obstacle-free, straight-line goal-seeking task establishes the baseline trajectory tracking performance.
 
-\textbf{TC02 -- Symmetric Corridor.} Six obstacles arranged symmetrically around the
-nominal flight path, testing multi-obstacle avoidance and path quality under spatial
-constraint.
+\textbf{TC02 -- Symmetric Corridor.} Six obstacles are placed symmetrically about the nominal flight path to evaluate multi-obstacle avoidance and path quality under spatial constraints.
 
-\textbf{TC03 -- Gap Navigation.} Two obstacles forming a 3\,m gap directly in the
-nominal flight path, assessing control precision and gap-threading capability.
+\textbf{TC03 -- Gap Navigation.} A 3\,m gap formed by two obstacles lies directly in the nominal flight path, permitting evaluation of control precision and gap-threading capability.
 
-\textbf{TC04 -- Dynamic Obstacle Avoidance.} Obstacles are excluded from the
-controller's sensor data until $t \geq 3.0$\,s, then revealed, requiring mid-flight
-reactive replanning. Both controllers receive identical sensor data at each timestep.
+\textbf{TC04 -- Dynamic Obstacle Avoidance.} Obstacles are withheld from the controller's sensor data until $t \geq 3.0$\,s, when their revelation requires reactive replanning during flight.
+Identical sensor data are supplied to both controllers at every timestep.
 
-\textbf{TC05 -- Parametric Robustness.} The TC02 obstacle configuration is retained
-but the plant dynamics are perturbed: mass $\pm 20$\%, diagonal inertia $\pm 30$\%,
-drag coefficients $\pm 50$\%, and thrust coefficient $k_T$ $\pm 15$\%. This
-characterises each controller's robustness margin under distributional shift.
+\textbf{TC05 -- Parametric Robustness.} The obstacle arrangement of TC02 is retained while the plant parameters are perturbed: mass by $\pm 20$\%, diagonal inertia by $\pm 30$\%, drag coefficients by $\pm 50$\% and thrust coefficient $k_T$ by $\pm 15$\%.
+This test characterizes each controller's robustness margin under distributional shift.
 
-The primary performance metrics are root mean square error (RMSE) of the Euclidean
-position error, integral absolute error (IAE), integral time-weighted absolute error
-(ITAE), path length ratio (PLR = actual path length / straight-line distance) and episode
-success rate (goal reached within 0.5\,m without collision).
+Performance is evaluated using the Root Mean Square Error (RMSE) of the Euclidean position error, Integral Absolute Error (IAE), Integral Time-weighted Absolute Error (ITAE), Path Length Ratio (PLR = actual path length / straight-line distance) and episode success rate.
+An episode is successful when the vehicle reaches within 0.5\,m of the goal without collision.
 
 
 \subsection{Stability Analysis}
 \label{sec:stability}
 
 \subsubsection{Standing Assumptions}
-
-Let $\boldsymbol{\eta} = [\phi,\theta,\psi]^{\top}$ denote the Euler attitude,
-$\boldsymbol{\omega}_B$ the body rate, and
-$\boldsymbol{\eta}_r = [\phi_{\mathrm{ref}},\theta_{\mathrm{ref}},0]^{\top}$ the
-commanded attitude.
-
+Let $\boldsymbol{\eta}=[\phi,\theta,\psi]^\top$ denote Euler attitude,
+$\boldsymbol{\omega}_B$ body rate, and
+$\boldsymbol{\eta}_r=[\phi_{\mathrm{ref}},\theta_{\mathrm{ref}},0]^\top$
+the commanded attitude.
 \begin{description}
-  \item[Assumption 1:] $\boldsymbol{\eta} \in \mathcal{D}_\eta = \{|\phi|,|\theta| \le \pi/6\}$,
-    on which $\sin x = x + \mathcal{O}(x^3)$ and
-    $\dot{\boldsymbol{\eta}} = \boldsymbol{\omega}_B + \mathcal{O}(\|\boldsymbol{\eta}\|\|\boldsymbol{\omega}_B\|)$.
-  \item[Assumption 2:] 
-    $\boldsymbol{\omega}_B \times J\boldsymbol{\omega}_B = \mathcal{O}(\|\boldsymbol{\omega}_B\|^2)$,
-    a locally Lipschitz perturbation vanishing at the origin.
-  \item[Assumption 3:] $\boldsymbol{\eta}_r(\cdot)$ is absolutely continuous with
-    $\|\dot{\boldsymbol{\eta}}_r\|_\infty \le \dot{\eta}_{\max}$,
-    $\|\ddot{\boldsymbol{\eta}}_r\|_\infty \le \ddot{\eta}_{\max}$.
-  \item[Assumption 4:] $T(t) \in [T_{\min},T_{\max}]$, $T_{\min}>0$.
+\item[Assumption 1:] The operating domain has
+$|\phi|,|\theta|\le\pi/6$, a fixed smooth angle-error branch,
+and torque limits $(0.6,0.6,0.35)\,\mathrm{Nm}$. The certificate uses ideal applied body torques.
+\item[Assumption 2:] The physical rotational model is
+$J\dot{\boldsymbol{\omega}}_B
+=\boldsymbol{\tau}-D_\omega\boldsymbol{\omega}_B
+-\boldsymbol{\omega}_B\times J\boldsymbol{\omega}_B$
+ and standard  Euler kinematics
+$\dot{\boldsymbol{\eta}}=\mathcal T(\boldsymbol{\eta})\boldsymbol{\omega}_B$.
+The local approximation $\mathcal T(0)=I_3$ defines the nominal
+linear model. 
+\item[Assumption 3:] Applied roll/pitch references are bounded by
+$\pi/6$. Continuous-reference error equations additionally assume
+$\boldsymbol{\eta}_r\in W^{2,\infty}$ with specified derivative bounds.
+
+\item[Assumption 4:] Actual thrust satisfies $0\le T(t)\le T_{\max}$,
+and horizontal drag satisfies $C_h=C_h^\top\ge c_{\min}I_2$,
+$c_{\min}>0$.
 \end{description}
-
-
-
 
 \subsubsection{Inner Loop: Attitude Stabilization}
 \label{sec:inner_loop}
 
-
-
-With $e_\phi = \phi_{\mathrm{ref}} - \phi$ and the PD law
-$\tau_\phi = K_p e_\phi + K_d \dot{e}_\phi$, (Assumption 1) and (Assumption 2) reduce the roll channel to
-
+With $e_\phi=\phi_{\mathrm{ref}}-\phi$, the implemented unsaturated
+PD law is $\tau_\phi=K_p e_\phi-K_d p$.
+Under $p\simeq\dot\phi$, the nominal local roll-error equation is
 \begin{equation}
-  I_{xx}\ddot{e}_\phi + (K_d+d_x)\dot{e}_\phi + K_p e_\phi = d_\phi(t),
-  \qquad
-  d_\phi = I_{xx}\ddot{\phi}_{\mathrm{ref}} + d_x\dot{\phi}_{\mathrm{ref}} - \Delta_\phi,
-  \label{eq:err_roll}
+\begin{aligned}
+ I_{xx}\ddot e_\phi+(K_d+d_x)\dot e_\phi+K_p e_\phi&=d_\phi(t),\\
+ d_\phi&=I_{xx}\ddot\phi_{\mathrm{ref}}
+ +(K_d+d_x)\dot\phi_{\mathrm{ref}}-\Delta_\phi.
+\end{aligned}
+\label{eq:err_roll}
+\end{equation}
+Here $d_x$ is rotational damping and $\Delta_\phi$ collects the remaining
+terms in the local roll representation. For the exact nonlinear model,
+kinematic residuals must be included as well as gyroscopic coupling.
+In state form $\mathbf e=[e_\phi,\dot e_\phi]^\top$,
+\begin{equation}
+ \dot{\mathbf e}=A\mathbf e+Bd_\phi,\quad
+ A=\begin{bmatrix}0&1\\-K_p/I_{xx}&-(K_d+d_x)/I_{xx}\end{bmatrix},
+ \quad B=\begin{bmatrix}0\\1/I_{xx}\end{bmatrix}.
+ \label{eq:err_state}
 \end{equation}
 
-with $\Delta_\phi = -[\boldsymbol{\omega}_B \times J\boldsymbol{\omega}_B]_x$. In
-state form $\mathbf{e}=[e_\phi,\dot{e}_\phi]^{\top}$,
-
-\begin{equation}
-  \dot{\mathbf{e}} = A\mathbf{e} + Bd_\phi, \qquad
-  A = \begin{bmatrix} 0 & 1 \\ -K_p/I_{xx} & -(K_d+d_x)/I_{xx} \end{bmatrix},
-  \quad B = \begin{bmatrix} 0 \\ 1/I_{xx} \end{bmatrix}.
-  \label{eq:err_state}
-\end{equation}
-
-\begin{theorem}[Inner-Loop LES]
+\begin{theorem}[Nominal Inner-Loop Exponential Stability]
 \label{thm:inner}
-$A$ is Hurwitz iff $K_p>0$ and $K_d+d_x>0$. For any positive defnite $Q$ the Lyapunov
-equation $A^{\top}P+PA=-Q$ admits a unique positive definite $P$, and
-$V(\mathbf{e})=\mathbf{e}^{\top}P\mathbf{e}$ certifies
+For $I_{xx}>0$, $A$ is Hurwitz if and only if
+$K_p>0$ and $K_d+d_x>0$.
+For any $Q=Q^\top>0$, the equation $A^\top P+PA=-Q$ has a unique
+$P=P^\top>0$. With $d_\phi=0$,
 \begin{equation}
-  \|\mathbf{e}(t)\| \le \sqrt{\lambda_{\max}(P)/\lambda_{\min}(P)}\,
-  \|\mathbf{e}(0)\|\,e^{-\alpha t}, \qquad
-  \alpha = \lambda_{\min}(Q)/2\lambda_{\max}(P).
-  \label{eq:les_bound}
+ \|\mathbf e(t)\|\le C\|\mathbf e(0)\|e^{-\alpha t},
+ \quad C=\sqrt{\frac{\lambda_{\max}(P)}{\lambda_{\min}(P)}},
+ \quad \alpha=\frac{\lambda_{\min}(Q)}{2\lambda_{\max}(P)}.
+ \label{eq:les_bound}
 \end{equation}
-
 \end{theorem}
-
 \begin{proof}
-Routh--Hurwitz on $\lambda^2+\frac{K_d+d_x}{I_{xx}}\lambda+\frac{K_p}{I_{xx}}$
-gives the stated condition. The converse Lyapunov theorem
-\parencite{khalil_nonlinear_2002} yields $P$, \eqref{eq:les_bound}
-follows from the comparison lemma \parencite{khalil_nonlinear_2002}. The
-$\mathcal{O}(\|\cdot\|^2)$ residuals of (Assumption 1)--(Assumption 2) are dominated by
-$\dot{V}\le-\lambda_{\min}(Q)\|\mathbf{e}\|^2$ in a neighbourhood of the
-origin, so LES of the nominal linearisation persists for the true nonlinear
-error dynamics \parencite{khalil_nonlinear_2002}.
+Routh--Hurwitz applied to
+$\lambda^2+(K_d+d_x)\lambda/I_{xx}+K_p/I_{xx}$
+gives the stated conditions. For $V=\mathbf e^\top P\mathbf e$,
+$\dot V=-\mathbf e^\top Q\mathbf e$ and
+$\lambda_{\min}(P)\|\mathbf e\|^2\le V
+\le\lambda_{\max}(P)\|\mathbf e\|^2$.
+Comparison gives \eqref{eq:les_bound}
+\parencite{khalil_nonlinear_2002}.
+This establishes the nominal result, a nonlinear extension requires
+the quantitative conditions stated below.
 \end{proof}
 
-\begin{corollary}[Inner-Loop ISS]
+\begin{corollary}[Nominal Inner-Loop ISS]
 \label{cor:iss}
-System \eqref{eq:err_state} is locally ISS with respect to $d_\phi$, with gain
+For every admissible fixed pair $(K_p,K_d)$, every $Q>0$, and every
+$\kappa\in(0,1)$, the nominal linear system \eqref{eq:err_state} is
+globally ISS with respect to its effective input $d_\phi$, with
 \begin{equation}
-  \gamma(s) = \sqrt{\lambda_{\max}(P)/\lambda_{\min}(P)}\,
-  \frac{2\|PB\|}{\kappa\,\lambda_{\min}(Q)}\,s, \qquad \kappa\in(0,1).
-  \label{eq:iss_gain}
+ \gamma_{Q,\kappa}(s)
+ =C\,\frac{2\|PB\|}{\kappa\lambda_{\min}(Q)}\,s.
+ \label{eq:iss_gain}
 \end{equation}
+For $D_t=\|d_\phi\|_{\infty,[0,t]}$, a corresponding state estimate is
+\begin{equation}
+ \|\mathbf e(t)\|\le\max\left\{
+ Ce^{-(1-\kappa)\alpha t}\|\mathbf e(0)\|,
+ \gamma_{Q,\kappa}(D_t)\right\}.
+ \label{eq:iss_state_bound}
+\end{equation}
+Globality, refers to the linear model.
 \end{corollary}
 \begin{proof}
-$V$ from Theorem~\ref{thm:inner} satisfies
-$\dot V \le -(1-\kappa)\lambda_{\min}(Q)\|\mathbf{e}\|^2$ for
-$\|\mathbf{e}\| \ge 2\|PB\|\,\|d_\phi\|_\infty/\kappa\lambda_{\min}(Q)$; this is
-precisely an ISS-Lyapunov function \parencite{khalil_nonlinear_2002}.
+On any fixed interval $[0,t]$, let
+$q=\lambda_{\min}(Q)$ and $D=D_t$. Then
+\[
+ \dot V\le-q\|\mathbf e\|^2+2\|PB\|\|\mathbf e\|D.
+\]
+For every $\kappa\in(0,1)$ and
+$\|\mathbf e\|\ge\rho(D)=2\|PB\|D/(\kappa q)$,
+$\dot V\le-(1-\kappa)q\|\mathbf e\|^2$.
+The sublevel set $V\le\lambda_{\max}(P)\rho(D)^2$ is invariant
+on this interval and has outer radius at most $C\rho(D)$.
+Above that level,
+$\dot V\le-2(1-\kappa)\alpha V$, comparison gives
+\eqref{eq:iss_state_bound} and hence \eqref{eq:iss_gain}.
 \end{proof}
+
+\begin{proposition}[Inner-Loop ISS]
+\label{prop:sampled_iss}
+For sample period $h>0$, let
+\[
+ A_0=\begin{bmatrix}0&1\\0&-d_x/I_{xx}\end{bmatrix},\quad
+ B_0=\begin{bmatrix}0\\1/I_{xx}\end{bmatrix},\quad
+ \Phi=e^{A_0h},\quad\Gamma=\int_0^h e^{A_0s}B_0\,ds.
+\]
+With held torque, set $S=\operatorname{diag}(-1,1)$,
+$M=S(\Phi-\Gamma[K_p\ K_d])S$, $E=(1,0)^\top$, and $H=S\Gamma$.
+For $y_k=(e_{\phi,k},p_k)^\top$ and
+$\delta r_k=\phi_{\mathrm{ref},k+1}-\phi_{\mathrm{ref},k}$,
+the nominal update is
+$y_{k+1}=My_k+E\delta r_k+Hd_k$,
+where $d_k$ is an additive torque held over the interval.
+This system is ISS if and only if $M$ is Schur. For real $2\times2$
+$M$, this is equivalent to
+\begin{equation}
+ 1-\operatorname{tr}M+\det M>0,\quad
+ 1+\operatorname{tr}M+\det M>0,\quad
+ 1-\det M>0.
+ \label{eq:sampled_admissible}
+\end{equation}
+For any $Q_d>0$, let $M^\top P_dM-P_d=-Q_d$ and define
+\[
+ p_+=\lambda_{\max}(P_d),\quad p_-=\lambda_{\min}(P_d),\quad
+ C_d=\sqrt{p_+/p_-},\quad
+ \rho_d=\sqrt{1-\lambda_{\min}(Q_d)/p_+}.
+\]
+Here $p_+$ denotes the maximum and $p_-$ the minimum eigenvalue.
+Then
+\begin{equation}
+ \|y_k\|\le C_d\rho_d^k\|y_0\|+g_rR_k+g_dW_k,\qquad
+ g_r=\frac{\|E\|_{P_d}}{\sqrt{p_-}(1-\rho_d)},\quad
+ g_d=\frac{\|H\|_{P_d}}{\sqrt{p_-}(1-\rho_d)},
+ \label{eq:sampled_bound}
+\end{equation}
+where $\|v\|_{P_d}=\sqrt{v^\top P_dv}$,
+$R_k=\sup_{j<k}|\delta r_j|$, and $W_k=\sup_{j<k}|d_j|$,
+with indices $0\le j<k$ and empty suprema zero.
+\end{proposition}
+\begin{proof}
+The discrete Lyapunov identity gives
+$\|My\|_{P_d}\le\rho_d\|y\|_{P_d}$.
+The triangle inequality and the geometric-series bound yield
+\eqref{eq:sampled_bound}. The Schur conditions
+\eqref{eq:sampled_admissible} are the second-order unit-circle
+criterion. General within-interval inputs are handled by bounding their
+integrated contribution in the same weighted norm.
+\end{proof}
+
+Define the nominal admissible attitude-PID set for axis $i$ by
+\begin{equation}
+\begin{aligned}
+ \mathcal K_i(h)=\bigl\{(K_p,K_i,K_d):\;&K_i=0,\ K_p>0,\ K_d+d_i>0,\\
+ &1-\operatorname{tr}M_i+\det M_i>0,\\
+ &1+\operatorname{tr}M_i+\det M_i>0,\quad1-\det M_i>0\bigr\}.
+ \label{eq:pid_admissible_set}
+\end{aligned}
+\end{equation}
+Here $M_i$ is the held-torque matrix above with the inertia and damping
+of axis $i$. Thus $\mathcal K=\mathcal K_\phi\times\mathcal K_\theta
+\times\mathcal K_\psi$ satisfies both the continuous Hurwitz and sampled
+Schur tests. This is a PD subset of PID parameter space; it makes no
+claim for nonzero attitude integral gains. Nonlinear admissibility also
+requires the state and reference conditions below.
+For a concrete certified subset, let
+\begin{equation}
+ \mathcal K_{\mathrm{box}}=
+ \left\{K\in\mathcal K:
+ 0.98K_{p,i}^0\le K_{p,i}\le1.02K_{p,i}^0,\quad
+ 0.98K_{d,i}^0\le K_{d,i}\le1.02K_{d,i}^0\right\},
+ \label{eq:pid_box}
+\end{equation}
+where the nominal attitude gains $K_{p,i}^0,K_{d,i}^0$ are listed in
+Table~\ref{tab:gains}. A common certificate below verifies the whole
+box, not just its nominal member. UHRC chooses references, not these gains.
+
+\begin{remark}[Choice of ISS bound]
+The original Lyapunov argument applies to every $Q>0$ and
+$\kappa\in(0,1)$, generating a family of valid ISS bounds.
+Changing these choices changes the certificate, not the deployed PID.
+The numerical value below is one example; it is not an extra stability
+assumption. Arbitrary PID gain variation is a different question and
+is not covered by this statement.
+\end{remark}
 
 \begin{table}[ht]
 \centering
-\caption{Verified closed-loop poles per channel ($K_i=0$ for roll/pitch/yaw).}
+\small
+\caption{Calculated poles of the unsaturated hover linearization.
+$K_i=0$ for roll/pitch/yaw; $K_i=61$ for altitude. All listed
+linearizations are Hurwitz.}
 \label{tab:gains}
-\begin{tabular}{lcccc}
+\begin{tabular}{lrrl}
 \toprule
-Channel & $K_p$ & $K_d$ & Poles (rad/s) & Hurwitz \\
+Channel & $K_p$ & $K_d$ & Poles ($\mathrm{s}^{-1}$)\\
 \midrule
-Roll   & 4.1602 & 0.85   & $-5.01,\ -103.74$ & \checkmark \\
-Pitch  & 4.1602 & 0.85   & $-5.01,\ -103.74$ & \checkmark \\
-Yaw    & 0.9848 & 0.9542 & $-1.03,\ -68.60$  & \checkmark \\
-Altitude & 153  & 135 ($K_i{=}61$) & Routh array $\{1,135.18,152.55,61\}>0$ & \checkmark \\
+Roll & 11.3425 & 0.49581 & $-31.574\pm19.655\,\mathrm{i}$\\
+Pitch & 11.3425 & 0.49581 & $-31.574\pm19.655\,\mathrm{i}$\\
+Yaw & 0.9848 & 0.9542 & $-67.337,\ -1.024$\\
+Altitude & 153 & 135 & $-134.051,\ -0.569\pm0.362\,\mathrm{i}$\\
 \bottomrule
 \end{tabular}
 \end{table}
-
-For roll/pitch: $\zeta=2.38$, $\omega_n=22.80$\,rad/s;
-$P=\begin{bsmallmatrix}2.5001 & 9.615\times10^{-4}\\ 9.615\times10^{-4} & 4.607\times10^{-3}\end{bsmallmatrix}$
-($Q=I$), giving $\lambda_{\max}(P)=2.5001$, $\lambda_{\min}(P)=4.606\times10^{-3}$,
-and $\alpha=0.200$\,s$^{-1}$.
+For roll/pitch, $I_{xx}=0.0082$, $d_x=0.022$,
+$\omega_n=37.191823\,\mathrm{rad/s}$, and $\zeta=0.848944$.
+For $Q=I_2$ in the coordinates of \eqref{eq:err_state},
+\[
+ P\approx\begin{bmatrix}
+ 10.983120413&0.000361472\\
+ 0.000361472&0.007923686
+ \end{bmatrix}.
+\]
+\[
+ \lambda_{\max}(P)\approx10.983120425,\quad
+ \lambda_{\min}(P)\approx0.007923675.
+\]
+Consequently $\alpha\approx0.045524\,\mathrm{s}^{-1}$.
+At $h=0.01\,\mathrm{s}$ the roll/pitch sampled poles are
+$0.654186\pm0.129989\,\mathrm{i}$, of modulus $0.666976<1$.
 
 \begin{remark}
-$\alpha$ is a conservative Lyapunov certificate, not the spectral abscissa
-$\varsigma(A)=-5.01$\,rad/s; the gap $|\alpha|\ll|\varsigma(A)|$ reflects the
-conservatism of a fixed $Q=I$ and is the price paid for a bound that survives
-the (A1)--(A2) perturbation, which pole placement alone does not certify.
+The decay certificate $\alpha$ is conservative and differs from
+$-\max\operatorname{Re}\lambda(A)=31.573780\,\mathrm{s}^{-1}$.
+For the illustrative choice $Q=I_2$, $\kappa=0.5$,
+$\|PB\|\approx0.967308$ and $\gamma(s)\approx144.053700s$
+in the stated coordinates and units. This numerical example does not
+restrict the general ISS result.
 \end{remark}
 
 \subsubsection{Outer Loop: Kinematic Guidance Map}
 \label{sec:outer_loop}
 
-Write $f_{\mathrm{UHRC}}:\mathbb{R}^{45}\times\mathcal{Z}\to\mathcal{D}$,
-$(\mathbf{o}_t,\mathbf{z}_t)\mapsto[\phi_{\mathrm{ref}},\theta_{\mathrm{ref}}]^{\top}$,
-$\mathcal{Z}=\mathbb{R}^{2\times C\times H}$, $\mathcal{D}=[-\pi/6,\pi/6]^2$.
+Write the applied reference map as
+$f_{\mathrm{UHRC}}=\operatorname{sat}_{\pi/6} f_{\mathrm{raw}}$,
+mapping $(\mathbf o_k,\mathbf z_k)\in\mathbb R^{45}\times\mathcal Z$
+to $\mathcal D=[-\pi/6,\pi/6]^2$, where
+$\mathcal Z=\mathbb R^{2\times C\times H}$ is the latent-carry space.
 
-\begin{lemma}[Hard Output Bound]
+\begin{lemma}[Output Bound]
 \label{lem:bounded}
-$f_{\mathrm{UHRC}}(\mathbf{o},\mathbf{z})\in\mathcal{D}$ for all
-$(\mathbf{o},\mathbf{z})\in\mathbb{R}^{45}\times\mathcal{Z}$, $t\ge0$.
+For every finite evaluation,
+$f_{\mathrm{UHRC}}(\mathbf o,\mathbf z)\in\mathcal D$.
 \end{lemma}
 \begin{proof}
-Immediate from $\mathrm{sat}_{\pi/6}(\cdot)$ applied element-wise at the action
-head; holds independently of network weights or observations.
+Elementwise saturation in the controller/evaluation interface bounds
+the applied reference. The linear action head does not itself impose
+the $\pi/6$ command limit.
 \end{proof}
 
 \begin{lemma}[Local Lipschitz Regularity]
 \label{lem:lipschitz}
-On compact $\mathcal{O}\times\mathcal{Z}_c$, $f_{\mathrm{UHRC}}$ is Lipschitz
-with $L_{\mathrm{UHRC}} \le \prod_l \sigma_{\max}(W_l)\cdot\prod_k L_k^{\mathrm{act}} <\infty$.
+For frozen finite weights, positive normalization scales, and positive
+RMSNorm regularization, $f_{\mathrm{UHRC}}$ is Lipschitz on compact
+observation carry sets.
 \end{lemma}
 \begin{proof}
-$f_{\mathrm{UHRC}}$ is a finite composition of: affine maps
-($L=\sigma_{\max}(W)$); SiLU ($L\le1.1$); SwiGLU (product of the above);
-scaled dot-product attention, Lipschitz on $\mathcal{O}$ since softmax is
-1-Lipschitz and $QK^{\top}$ is bounded bilinear there; RMSNorm, Lipschitz for
-$\|\mathbf{z}\|\ge\delta>0$; and $\mathrm{sat}_{\pi/6}$ (1-Lipschitz,
-non-expansive). A finite composition of locally Lipschitz maps is locally
-Lipschitz with constant bounded by the product of factors.
+For a fixed finite number of recurrent updates, the pre-saturation
+network is locally smooth, with derivatives
+bounded on compact sets. Positive RMSNorm regularization prevents a
+zero denominator, including at zero latent input. Its Lipschitz bound
+is at most $1/\sqrt{\epsilon}$ for the unweighted RMSNorm used here.
+Their composition is therefore locally Lipschitz.
+Attention, gated products, and residual maps must be included in any
+numerical bound.
 \end{proof}
+In the supplied architecture, each newly stored carry token passes
+through RMSNorm and therefore has norm at most $\sqrt H$.
+Finite initialized carry tokens consequently remain in a compact
+token set. This is bounded memory.
 
 \subsubsection{Cascade Interconnection: ISS and UUB}
 \label{sec:cascade}
 
-\begin{theorem}[Cascade UUB]
+Use the fixed rate scales
+$\sigma_\phi=\sigma_\theta=37.2\,\mathrm{s}^{-1}$,
+$\sigma_\psi=8.31\,\mathrm{s}^{-1}$ and the interleaved state
+\[
+ \chi=(e_\phi,p/\sigma_\phi,e_\theta,q/\sigma_\theta,
+             e_\psi,r/\sigma_\psi)^\top,\qquad
+ e_i=\eta_{r,i}-\eta_i.
+\]
+All angles are in radians. Set
+\begin{equation}
+\begin{gathered}
+ P_0=\operatorname{diag}(P_{\mathrm{rp}},P_{\mathrm{rp}},P_\psi),\\
+ P_{\mathrm{rp}}=\begin{bmatrix}
+ 4.11450013&-1.00164618\\-1.00164618&1.70383480
+ \end{bmatrix},\\
+ P_\psi=\begin{bmatrix}
+ 1.26523980&-0.25464857\\-0.25464857&1.24448025
+ \end{bmatrix},\\
+ 0.99I_6<P_0<4.48I_6.
+ \label{eq:common_sampled_certificate}
+\end{gathered}
+\end{equation}
+The displayed terminating decimals define the certificate matrices.
+Use the norms
+\[
+ \|x\|_{P_0}=\sqrt{x^\top P_0x},\qquad
+ \|A\|_{P_0}=\sup_{x\ne0}\frac{\|Ax\|_{P_0}}{\|x\|_{P_0}}.
+\]
+For every gain choice in \eqref{eq:pid_box}, the scaled nominal map
+$N(K)$ and its within interval held feedback map $L_t(K)$ satisfy
+\begin{equation}
+ \|N(K)\|_{P_0}<0.9903,\qquad
+ \|L_t(K)\|_{P_0}\le1,\qquad
+ \|F_t\|_{P_0}<1.35,\quad0\le t\le h,
+ \label{eq:common_contraction}
+\end{equation}
+where $F_t$ is the open, damped nominal flow.
+
+For completeness, these uniform bounds reduce to finite matrix tests.
+On axis $i$, define $d_i/J_i=\delta_i$ and
+$f_i(t)=(1-e^{-\delta_i t})/\delta_i$. Then
+\[
+\begin{gathered}
+ F_i(t)=\begin{bmatrix}1&-\sigma_i f_i(t)\\0&1-\delta_i f_i(t)\end{bmatrix},\quad
+ G_i(t)=\begin{bmatrix}-(t-f_i(t))/d_i\\f_i(t)/(J_i\sigma_i)\end{bmatrix},\\
+ L_i(t,K)=F_i(t)+G_i(t)[K_{p,i}\ {-K_{d,i}\sigma_i}],\qquad N_i=L_i(h,K).
+\end{gathered}
+\]
+The pair $(t,f_i(t))$ lies in the triangle with vertices
+$(0,0),(h,f_i(h)),(h,h)$.
+For fixed gains, $L_i$ is affine in this pair and for fixed $(t,f)$,
+it is affine in the gains. Convexity of an induced matrix norm
+therefore reduces \eqref{eq:common_contraction} to gain-box vertices
+and these three time vertices. The open flow uses $0\le f_i(t)\le h$.
+The positive-definiteness tests for the displayed matrices were
+verified with rational interval arithmetic, enclosing
+$e^{-\delta_i h}$ between the nineteenth and twentieth alternating
+Taylor sums. The smallest lower bound on the leading principal minor
+or determinant of $0.9903^2P_i-N_i^\top P_iN_i$ is
+$1.94\times10^{-4}$ at the tested vertices.
+
+\paragraph{Quantified nonlinear residual.}
+The exact Euler transformation is
+\[
+ \mathcal T(\phi,\theta)=
+ \begin{bmatrix}
+ 1&\sin\phi\tan\theta&\cos\phi\tan\theta\\
+ 0&\cos\phi&-\sin\phi\\
+ 0&\sin\phi/\cos\theta&\cos\phi/\cos\theta
+ \end{bmatrix}.
+\]
+For $|\phi|,|\theta|\le a_\eta\le0.01$, direct entrywise bounds give
+\begin{equation}
+ \|\mathcal T-I_3\|_2^2
+ \le\tan^2a_\eta+(1+\sec^2a_\eta)
+                   (a_\eta^2+a_\eta^4/4)
+ <(1.75a_\eta)^2\quad(a_\eta>0).
+ \label{eq:euler_residual_bound}
+\end{equation}
+For the axisymmetric inertia in Assumption 2,
+\[
+ J^{-1}(-\boldsymbol\omega_B\times J\boldsymbol\omega_B)
+ =g(-qr,pr,0)^\top,\quad
+ g=\frac{0.01428-0.0082}{0.0082},\quad
+ \|g(-qr,pr,0)\|_2\le\tfrac g2\|\boldsymbol\omega_B\|_2^2.
+\]
+Let $\mathcal E u=(u_1,0,u_2,0,u_3,0)^\top$ and
+$\mathcal B u=(0,u_1/(J_1\sigma_1),0,u_2/(J_2\sigma_2),
+0,u_3/(J_3\sigma_3))^\top$.
+The matrices in \eqref{eq:common_sampled_certificate} give
+\[
+ \|\mathcal E u\|_{P_0}\le2.03\|u\|_2,\quad
+ \|\boldsymbol\omega_B\|_2\le30.8\|\chi\|_{P_0},\quad
+ |e_\phi|,|e_\theta|\le0.533\|\chi\|_{P_0},\quad
+ \|\mathcal B u\|_{P_0}\le9.5\|u\|_2.
+\]
+Since $\max_i\sqrt{(P_i)_{22}}/\sigma_i<0.135$ and
+$0.135(g/2)(30.8)^2<48$, the normalized gyroscopic contribution
+has weighted norm at most $48\|\chi\|_{P_0}^2$. Hence, for held references
+$|\phi_{\mathrm{ref}}|,|\theta_{\mathrm{ref}}|\le\bar r$,
+the complete kinematic and gyroscopic residual obeys
+\begin{equation}
+ \|\mathcal R(\chi,\boldsymbol\eta_r)\|_{P_0}
+ \le111\bar r\|\chi\|_{P_0}+108\|\chi\|_{P_0}^2,
+ \quad\bar r+0.533\|\chi\|_{P_0}\le0.01.
+ \label{eq:nonlinear_quantified}
+\end{equation}
+For example, the first coefficient follows from
+$2.03\times30.8\times1.75<111$, and the quadratic coefficient
+from $111\times0.533+48<108$. Thus nonzero references produce
+a quantified linear residual as well as quadratic terms.
+
+\paragraph{Admissible references and invariant enclosure.}
+
+Define
+\begin{equation}
+\begin{aligned}
+ \mathcal R_{\mathrm{ad}}(\bar r,R)=\{\boldsymbol\eta_r:\;&
+ \boldsymbol\eta_r(t)=\boldsymbol\eta_{r,k},\quad kh\le t<(k+1)h,\\
+ &\eta_{r,k,3}=0,\quad |\eta_{r,k,1}|,|\eta_{r,k,2}|\le\bar r,\\
+ &\|\boldsymbol\eta_{r,k+1}-\boldsymbol\eta_{r,k}\|_2\le R\}.
+ \label{eq:admissible_references}
+\end{aligned}
+\end{equation}
+Let $w(t)$ be additive physical torque, with
+$\sup_{kh\le t<(k+1)h}\|w(t)\|_2\le W$.
+For sample radius $s$ and a larger intersample radius $S$, set
+\begin{equation}
+\begin{gathered}
+ \ell_R=111\bar r+108S,\quad
+ d_h=1.35h\ell_R<1,\quad c_w=1.35h(9.5),\\
+ a_*=0.9903+\frac{d_h}{1-d_h}<1,\qquad
+ b_w=\frac{c_w}{1-d_h}.
+ \label{eq:nonlinear_constants}
+\end{gathered}
+\end{equation}
+Sufficient containment and input-budget conditions are
+\begin{equation}
+\begin{gathered}
+ \bar r+0.533S\le0.01,\qquad
+ \frac{s+c_wW}{1-d_h}<S,\\
+ 2.03R+b_wW\le(1-a_*)s,\qquad
+ 15s+W<0.6,\quad7.5s+W<0.35.
+ \label{eq:invariant_conditions}
+\end{gathered}
+\end{equation}
+Here $15s$ and $7.5s$ bound commanded roll/pitch and yaw torque on
+the sample ellipsoid uniformly over the gain box. They follow from
+$\sqrt{s^2a_i^\top P_i^{-1}a_i}$,
+$a_i=(K_{p,i},-K_{d,i}\sigma_i)^\top$, tested at gain vertices.
+
+\begin{theorem}[Local Sampled Cascade ISS and UUB]
 \label{thm:cascade_iss}
-Under (Assumption 1)--(Assumption 4), Corollary~\ref{cor:iss}, and Lemma~\ref{lem:bounded}, the
-rotational state $\mathbf{x}_{\mathrm{rot}}=(\boldsymbol{\eta},\boldsymbol{\omega}_B)$
-is uniformly ultimately bounded with ultimate bound
-$\mu=\gamma(\pi/6)+\gamma(\ddot{\eta}_{\max}I_{xx}+\dot{\eta}_{\max}d_x)$.
+For the physical rotational model in Assumption 2, gains in
+$\mathcal K_{\mathrm{box}}$, references in
+$\mathcal R_{\mathrm{ad}}(\bar r,R)$, and bounded torque $w$, suppose
+\eqref{eq:invariant_conditions} holds and $\|\chi_0\|_{P_0}\le s$.
+Then the reference-dependent sample enclosure
+\[
+ \Omega_s=\{(\boldsymbol\eta,\boldsymbol\omega_B,
+                  \boldsymbol\eta_r):\|\chi\|_{P_0}\le s,
+ |\eta_{r,1}|,|\eta_{r,2}|\le\bar r,\ \eta_{r,3}=0\}
+\]
+is invariant at control updates, its intersample tube satisfies
+$\|\chi(t;\boldsymbol\eta_{r,k})\|_{P_0}<S$, and torque saturation
+is inactive. Moreover,
+\begin{equation}
+ \|\chi_{k+1}\|_{P_0}\le a_*\|\chi_k\|_{P_0}
+ +2.03\|\delta\boldsymbol\eta_{r,k}\|_2+b_wW,
+ \label{eq:full_decrease}
+\end{equation}
+and consequently
+\begin{equation}
+ \|\chi_k\|_2\le
+ \sqrt{4.48/0.99}\,a_*^k\|\chi_0\|_2+
+ \frac{2.03R+b_wW}{\sqrt{0.99}(1-a_*)}.
+ \label{eq:nonlinear_iss_estimate}
+\end{equation}
+This establishes local ISS of rotational tracking, with invariant
+local-domain containment, and UUB for the stated admissible inputs.
 \end{theorem}
 \begin{proof}
-By Lemma~\ref{lem:bounded} the driving signal $\boldsymbol{\eta}_r$ lies in the
-compact set $\mathcal{D}$; by (Assumption 3), $\|d_\phi\|_\infty<\infty$. An ISS system
-(Corollary~\ref{cor:iss}) driven by a uniformly bounded input is UUB with bound
-$\gamma(\|d_\phi\|_\infty)$ \parencite{khalil_nonlinear_2002}; no
-small-gain condition is required since $\mathrm{sat}_{\pi/6}$ caps the
-feedback path independently of the inner-loop state
-\parencite{sontag_smooth_1989}.
+Over a held-reference interval, variation of constants gives
+\[
+ \chi(t)=L_t(K)\chi_k+
+ \int_0^t F_{t-u}[\mathcal R(\chi(u),\boldsymbol\eta_{r,k})
+                              +\mathcal B w(u)]\,du.
+\]
+Up to a first exit from $\|\chi\|_{P_0}<S$,
+\eqref{eq:nonlinear_quantified} bounds the residual by
+$\ell_R\|\chi\|_{P_0}$.
+For $Y=\sup_{0\le t\le h}\|\chi(t)\|_{P_0}$,
+\[
+ Y\le\|\chi_k\|_{P_0}+d_hY+c_wW,
+ \qquad Y\le\frac{\|\chi_k\|_{P_0}+c_wW}{1-d_h}<S.
+\]
+The strict tube inequality prevents a first exit; the angle bounds
+and held-torque limits prevent exit from the valid model domain.
+At $h$, the stronger nominal contraction in
+\eqref{eq:common_contraction}, followed by the reference jump
+$\mathcal E\delta\boldsymbol\eta_{r,k}$, yields
+\eqref{eq:full_decrease}. The input budget gives
+$\|\chi_{k+1}\|_{P_0}\le a_*s+2.03R+b_wW\le s$.
+Induction proves sample invariance and tube validity; geometric-series
+comparison and norm equivalence prove \eqref{eq:nonlinear_iss_estimate}.
 \end{proof}
 
-\begin{remark}[Timescale Separation Fails]
-With $Q=I$, $\kappa=0.5$: $\|PB\|=0.588$, $\gamma(s)\approx 54.8\,s$. The EMA
-reference filter ($\alpha=0.12$, 100\,Hz) has bandwidth
-$\omega_{\mathrm{out}}\approx12.78$\,rad/s, exceeding the inner spectral
-abscissa $|\varsigma(A)|=5.01$\,rad/s, i.e. $\epsilon=\omega_{\mathrm{out}}/|\varsigma(A)|\approx2.55\not\ll1$.
-Singular perturbation reduction \parencite{khalil_nonlinear_2002} is
-therefore not justified; the ISS cascade argument above requires no such
-separation.
+\paragraph{Parametric representation of the certificate.}
+Using the preceding verified constants at $h=0.01\,\mathrm{s}$,
+represent the admissible region and input choices by
+\begin{equation}
+ \mathcal A=\left\{(\bar r,s,S,R,W):
+ \bar r,R,W\ge0,\quad0<s<S,\quad
+ \text{\eqref{eq:nonlinear_constants} and
+       \eqref{eq:invariant_conditions} hold}\right\}.
+ \label{eq:admissible_certificate_family}
+\end{equation}
+No particular radius, reference increment, or disturbance bound is
+prescribed. Each member of $\mathcal A$ defines an invariant enclosure
+$\Omega_s$, an intersample tube of radius $S$, and the reference set
+$\mathcal R_{\mathrm{ad}}(\bar r,R)$.
+The set is nonempty, with $\bar r=R=W=0$, choose $S>0$
+sufficiently small for contraction and angle containment, then choose
+$0<s<(1-d_h)S$ satisfying the torque limits. The strict margins
+also admit sufficiently small positive reference and disturbance bounds.
+
+The nonlinear contraction condition has the equivalent representation
+\begin{equation}
+\begin{aligned}
+ a_*<1
+ &\quad\Longleftrightarrow\quad
+ d_h<\frac{1-0.9903}{2-0.9903},\qquad 0\le d_h<1,\\
+ &\quad\Longleftrightarrow\quad
+ 111\bar r+108S<
+ \frac{1-0.9903}{1.35h(2-0.9903)}.
+ \label{eq:parametric_contraction_condition}
+\end{aligned}
+\end{equation}
+Thus the available contraction margin determines the admissible
+nonlinear region. For each admissible $(\bar r,s,S,W)$, the reference
+increment budget is
+\begin{equation}
+ 0\le R\le R_{\max}(\bar r,s,S,W)
+ :=\frac{(1-a_*)s-b_wW}{2.03},\qquad
+ b_wW\le(1-a_*)s.
+ \label{eq:parametric_reference_budget}
+\end{equation}
+The disturbance bound must also satisfy the intersample and actuator
+conditions, equivalently
+\begin{equation}
+ 0\le W<\min\left\{
+ \frac{(1-d_h)S-s}{c_w},\quad0.6-15s,\quad0.35-7.5s
+ \right\}.
+ \label{eq:parametric_disturbance_budget}
+\end{equation}
+Together with $\bar r+0.533S\le0.01$, these inequalities specify
+the permissible choices rather than assigning unsupported numerical
+operating limits. Initialization requires $\|\chi_0\|_{P_0}\le s$.
+
+The corresponding physical bounds are
+\begin{equation}
+\begin{aligned}
+ |\phi(t)|,|\theta(t)|&\le\bar r+0.533S,\\
+ \|\boldsymbol\omega_B(t)\|_2&\le30.8S,\\
+ |\tau_{\phi,k}|,|\tau_{\theta,k}|&\le15s,
+ \qquad|\tau_{\psi,k}|\le7.5s,\\
+ \limsup_{k\to\infty}\|\chi_k\|_{P_0}
+ &\le\frac{2.03R+b_wW}{1-a_*}\le s.
+ \label{eq:parametric_physical_bounds}
+\end{aligned}
+\end{equation}
+Here the torque bounds apply to commanded torques; the additive
+torque allowance $W$ is included in
+\eqref{eq:parametric_disturbance_budget}.
+For zero reference increments and zero external torque, the tracking
+origin is locally exponentially stable; bounded admissible inputs
+give the ultimate error neighbourhood in \eqref{eq:nonlinear_iss_estimate}.
+Attitude and rate bounds are recovered from $\eta_i=\eta_{r,i}-e_i$
+and $\omega_i=\sigma_i\chi_{2i}$, not by feeding angle units into a
+torque-input ISS gain.
+
+\begin{remark}[Scope of the nonlinear certificate]
+The family $\mathcal A$ certifies local invariant enclosures near hover,
+not the full $30^\circ$ operating domain.
+Each choice must satisfy
+\eqref{eq:nonlinear_constants}--\eqref{eq:invariant_conditions}
+The current $30^\circ$ clipping interface alone does not enforce
+\eqref{eq:admissible_references}. An all-time UHRC interconnection
+claim therefore requires an implemented admissibility mechanism or
+an independent guarantee that its applied references belong to that set.
+The altitude PID and navigational position dynamics require separate
+stability arguments.
 \end{remark}
+
+
 
 \subsubsection{Translational Consequences and Convergence}
 \label{sec:translation}
 
-\begin{proposition}[Velocity UUB, Position Unbounded]
+\begin{proposition}[Velocity UUB]
 \label{prop:trans}
-Under Theorem~\ref{thm:cascade_iss} and (Assumption 4),
-$\limsup_{t\to\infty}\|\mathbf{v}_I^{\mathrm{h}}(t)\| \le T_{\max}\sin(\pi/6+\mu)/c_{\mathrm{lin}} <\infty$,
-but $\|\mathbf{r}_I(t)-\mathbf{r}_{\mathrm{goal}}\|$ admits no finite bound.
+
+Under Assumption 4,
+\[
+ \|\mathbf v_I^{\mathrm h}(t)\|
+ \le e^{-c_{\min}t/m}\|\mathbf v_I^{\mathrm h}(0)\|
+ +\frac{T_{\max}}{c_{\min}}(1-e^{-c_{\min}t/m}).
+\]
+Thus $\limsup_{t\to\infty}\|\mathbf v_I^{\mathrm h}(t)\|
+\le T_{\max}/c_{\min}$, but attitude stability and bounded velocity
+alone do not guarantee bounded position error.
 \end{proposition}
 \begin{proof}
-From \eqref{eq:trans}, horizontal acceleration is bounded by
-$T_{\max}\sin(\pi/6+\mu)/m$ and opposed by linear drag $c_{\mathrm{lin}}\mathbf{v}_I$;
-the resulting scalar ODE $\dot v \le \bar{a}-\frac{c_{\mathrm{lin}}}{m}v$ has UUB
-solutions with the stated bound. Since $\mathbf{v}_I^{\mathrm h}$ may settle at
-any nonzero value within this bound (attitude UUB does not force
-$\boldsymbol{\eta}\to\mathbf{0}$, only $\boldsymbol{\eta}\in\mathcal{B}_\mu$), a
-persistent nonzero terminal tilt yields $\|\mathbf{r}_I(t)-\mathbf{r}_{\mathrm{goal}}\|\to\infty$
-linearly in $t$ whenever the terminal heading is not goal-directed.
+The horizontal force satisfies $\|F_h\|\le T_{\max}$, giving
+\[
+ D^+\|\mathbf v_I^{\mathrm h}\|
+ \le T_{\max}/m-(c_{\min}/m)\|\mathbf v_I^{\mathrm h}\|.
+\]
+Scalar comparison yields the estimate. A constant nonzero horizontal
+force can produce a nonzero terminal velocity and hence unbounded
+position drift, providing a counterexample to a general position bound.
 \end{proof}
 
-\begin{theorem}[Conditional Asymptotic Goal Convergence]
+\begin{theorem}[Goal-Region Attractiveness]
 \label{thm:conv}
-Let $V_{\mathrm{nav}}=\tfrac12\|\mathbf{r}_I-\mathbf{r}_{\mathrm{goal}}\|^2$. If
-$\exists\,\alpha_3\in\mathcal{K}$ such that
+Let $V_{\mathrm{nav}}=\tfrac12\|\mathbf r_I^{\mathrm h}
+-\mathbf r_{\mathrm{goal}}^{\mathrm h}\|^2$.
+For $r_0>0$, assume the goal region
+$\mathcal G=\{\|\mathbf r_I^{\mathrm h}
+-\mathbf r_{\mathrm{goal}}^{\mathrm h}\|\le r_0\}$ is forward invariant.
+If there exists $\alpha_3\in\mathcal K$ such that
 \begin{equation}
-  \langle\nabla_{\mathbf{r}}V_{\mathrm{nav}},\,\mathbf{v}_I\rangle \le -\alpha_3(V_{\mathrm{nav}})
-  \qquad\forall\,t\ge T
-  \label{eq:gdc}
+ \dot V_{\mathrm{nav}}
+ =(\mathbf r_I^{\mathrm h}-\mathbf r_{\mathrm{goal}}^{\mathrm h})^\top
+   \mathbf v_I^{\mathrm h}
+ \le-\alpha_3(V_{\mathrm{nav}})
+ \label{eq:gdc}
 \end{equation}
-outside $\mathcal{B}_{r_0}(\mathbf{r}_{\mathrm{goal}})$, then
-$\mathbf{r}_I(t)\to\mathcal{B}_{r_0}(\mathbf{r}_{\mathrm{goal}})$.
+outside $\mathcal G$ for all $t\ge T$, the trajectory enters
+$\mathcal G$ in finite time and remains there.
 \end{theorem}
+\begin{proof}
+Outside $\mathcal G$,
+$\dot V_{\mathrm{nav}}\le-\alpha_3(r_0^2/2)<0$.
+Failure to enter would force $V_{\mathrm{nav}}$ below $r_0^2/2$
+in finite time, a contradiction. Invariance ensures persistence.
+\end{proof}
 \begin{remark}
-\eqref{eq:gdc} is a property of the trained policy, not analytically
-verifiable for $f_{\mathrm{UHRC}}$; behavioural cloning enforces it nowhere by
-construction. Empirically, \eqref{eq:gdc} held throughout all successful
-trials ($N=30$ per scenario) and was violated prior to onset of divergence in
-all failures, consistent with Proposition~\ref{prop:trans}, which predicts
-exactly this failure mode (bounded attitude, unbounded position) rather than
-attitude instability or tumbling.
+Equation \eqref{eq:gdc} is a sufficient policy-dependent condition,
+not guaranteed by behavioural cloning. An obstacle detour may
+temporarily violate it. Attraction to a nonzero-radius goal region
+does not establish exact goal convergence, low-speed settling,
+or collision avoidance. 
 \end{remark}
 
 \section{Results}
 \label{sec:results}
 
-This section presents quantitative and qualitative results for the UHRC-PID and the
-classical hierarchical baseline across the five structured test cases (TC01--TC05).
-All metrics are computed over $N = 30$ Monte Carlo trials per scenario. RMSE and
-IAE are evaluated over a full episode duration (this is dependent based on how long the drone takes to reach the goal), including failed and
-divergent trials. This is done, so that aggregate statistics reflect operational reliability
-rather than selective best-case performance. Path length ratio (PLR) is defined as
-the ratio of actual path length travelled to the straight-line start-to-goal
-distance.
-Table~\ref{tab:results_summary} presents the consolidated performance summary across
-all scenarios and both controllers.
+This section reports the quantitative and qualitative performance of the UHRC-PID and classical hierarchical baseline over the five test cases (TC01--TC05).
+The metrics are computed from $N = 30$ Monte Carlo trials per scenario.
+RMSE and IAE are evaluated over the complete duration of each episode, which depends on the time required to reach the goal, and include failed and divergent trials.
+This is done so that the aggregate statistics characterize operational reliability, rather than selective best-case performance.
+The PLR is the ratio of the actual path length travelled to the straight-line distance between the start and goal.
+Table~\ref{tab:results_summary} summarizes the performance of both controllers across all scenarios.
+
+\subsection{Classical Hierarchical Baseline}
+\label{sec:baseline}
+
+
+The classical baseline comprises four stages which implement the full supervisory-regulatory decomposition described in the literature \parencite{sanders_hierarchical_1998, scattolini_hierarchical_2007}.
+It serves as a representative instance of the class of hierarchical architectures that the UHRC is intended to replace.
+
+An Inertial Navigation System Extended Kalman Filter (INSEKF) combines Global Positioning System (GPS) position estimates with Attitude and Heading Reference System (AHRS) orientation estimates at 10\,Hz, yielding the pose estimate $[\hat{\mathbf{r}}_I, \hat{\mathbf{q}}_{BI}]$.
+LiDAR odometry is obtained through Iterative Closest Point (ICP) registration of 2D point cloud keyframes.
+The keyframes are accumulated in a pose graph, which is optimized using the Levenberg-Marquardt algorithm at fixed intervals of 500 nodes \parencite{gupta_simultaneous_2022, milijas_comparison_2021}.
+
+The A* algorithm then computes a collision-free path on a 2D occupancy grid, formed by projecting the LiDAR returns onto the ground plane with a cell resolution of 2.0\,m.
+The grid covers a height band of $\pm 2.0$\,m about the drone's estimated flight level.
+Path feasibility is guaranteed when a collision-free grid path exists \parencite{zhou_review_2021}; otherwise, the previously valid path is retained.
+
+
+The planned waypoint sequence is converted into position setpoints at 10\,Hz by a pure pursuit tracker with fixed lookahead distance $L_d = 0.8$\,m \parencite{huang_path_2020}.
+
+
+The position setpoints are tracked through a cascaded PID structure.
+The outer position loop converts horizontal position errors into desired roll and pitch references $[\phi_d, \theta_d]$ using the standard small-angle coupling $\theta_d = a_x^{\mathrm{des}} / g$, $\phi_d = -a_y^{\mathrm{des}} / g$.
+The inner attitude loop uses derivative-filtered PID controllers on each axis to convert the attitude and altitude errors into body wrench commands \parencite{ren_efficient_2025,bouabdallah_design_2007}.
+
 
 \begin{table*}[ht]
 \centering
-\caption{Performance summary across all test cases ($N = 30$ trials). Metrics are
-averaged over all trials including failures. Dashes indicate metrics not formally
-recorded in the original benchmark for that scenario. Classical controller success
-is 100\% for TC01--TC03 and TC05 based on all 30 trials reaching the goal without
-collision.}
+\caption{Performance summary across all test cases ($N = 30$ trials).
+Metrics are averaged over all trials, including failures.
+Dashes indicate metrics that were not formally recorded in the original benchmark for that scenario.
+The success rate of the classical controller is 100\% for TC01--TC03 and TC05, based on all 30 trials reaching the goal without collision.}
 \label{tab:results_summary}
 \begin{tabular}{llccccc}
 \hline
@@ -1123,25 +1328,17 @@ Controller & Scenario & Success (\%) & RMSE (m) & IAE (m\,s) & ITAE (m\,s$^2$) &
 \label{sec:tc01}
 
 
-TC01 establishes baseline goal-seeking performance in the absence of any obstacles.
-The classical controller achieved 100\% success across all 30 trials, with a mean
-RMSE of 0.938\,m and an IAE of 43.426\,m\,s. The residual tracking error is
-attributable to cumulative drift in the ICP odometry subsystem and the fixed-interval
-pose graph optimisation cycle: the INSEKF position estimator exhibited residual errors
-of 0.376\,m along $x$ and 0.265\,m along $y$ under square-trajectory validation,
-confirming that localisation noise propagates directly into the tracking error. The
-PLR of 2.090 reflects the pure-pursuit tracker's lookahead-induced lateral oscillations
-around the nominal straight-line path.
+TC01 evaluates baseline goal-seeking performance in an obstacle-free environment.
+The classical controller reached the goal in all 30 trials, achieving 100\% success, with a mean RMSE of 0.938\,m and an IAE of 43.426\,m\,s.
+The residual tracking error is attributable to cumulative drift in the ICP odometry subsystem and the fixed-interval pose graph optimization.
+During square-trajectory validation, the INSEKF position estimator exhibited residual errors of 0.376\,m along $x$ and 0.265\,m along $y$, confirming the direct propagation of localization noise into tracking error.
+The PLR of 2.090 results from lookahead-induced lateral oscillations of the pure-pursuit tracker about the nominal straight-line path.
 
-The UHRC-PID achieved a success rate of 30\% (9 of 30 trials) with a mean RMSE of
-5.307\,m and a PLR of 2.09. The two successful
-trials shared a common characteristic, the initial goal distance was below
-approximately 7\,m, placing the goal within a range at which the learned policy
-converged to a stable goal-seeking attractor before the carry state had drifted
-out of distribution. On longer-range goals, prediction errors in the generated torques
-compound across successive timesteps, driving the vehicle into states the model has
-never encountered. Qualitative trajectories for both
-controllers are shown in Figures~\ref{fig:tc01_uhrc-pid} and~\ref{fig:tc01_classical}.
+The UHRC-PID achieved 30\% success (9 of 30 trials), with a mean RMSE of 5.307\,m and a PLR of 2.09.
+In the two successful trials, the initial goal distance was below approximately 7\,m.
+At this range, the policy converged to a stable goal-seeking attractor before the carry state drifted outside the training distribution.
+For more distant goals, however, errors in the generated torque predictions accumulate over successive timesteps, driving the vehicle into states not previously encountered by the model.
+Figures~\ref{fig:tc01_uhrc-pid} and~\ref{fig:tc01_classical} show the qualitative trajectories of both controllers.
 
 \begin{figure*}[ht]
     \centering
@@ -1159,7 +1356,7 @@ controllers are shown in Figures~\ref{fig:tc01_uhrc-pid} and~\ref{fig:tc01_class
         \label{fig:tc01_classical}
     \end{subfigure}
     \caption{TC01 open-field transit trajectories. The UHRC diverges from the
-             goal in 90\% of trials while the classical controller converges
+             goal in 90\% of trials, while the classical controller converges
              in all 30 trials.}
     \label{fig:tc01}
 \end{figure*}
@@ -1167,14 +1364,10 @@ controllers are shown in Figures~\ref{fig:tc01_uhrc-pid} and~\ref{fig:tc01_class
 \subsection{TC02: Symmetric Corridor Navigation}
 \label{sec:tc02}
 
-TC02 places six obstacles symmetrically around the nominal flight corridor, requiring
-the controller to plan and execute a collision-free traversal of a geometrically
-constrained environment. The classical controller achieved 100\% success with a PLR
-of 1.158, indicating the A* planner identified a valid path through the corridor
-in all trials. The modest PLR elevation above 1.0 reflects the 2.0\,m cell resolution
-of the occupancy grid, which prevents precise path placement in narrow passages and
-forces small detours. An RMSE of 0.6306\,m and an IAE of 11.25\,m\,s confirm that the classical controller maintained accurate tracking of the planned path, seen in the figures corresponding figures.
-shown in Figure~\ref{fig:tc02_classical}.
+In TC02, six obstacles are arranged symmetrically about the nominal flight corridor, requiring a collision-free path to be planned and executed within a geometrically constrained environment.
+The classical controller achieved 100\% success and a PLR of 1.158, indicating that A* found a valid corridor path in every trial.
+The modest elevation of the PLR above 1.0 arises because the 2.0\,m occupancy grid resolution prevents precise path placement in narrow passages, necessitating small detours.
+The RMSE of 0.6306\,m and IAE of 11.25\,m\,s confirm accurate tracking of the planned path, as shown in Figure~\ref{fig:tc02_classical}.
 \begin{figure*}[ht]
     \centering
     \begin{subfigure}[b]{0.48\textwidth}
@@ -1196,27 +1389,22 @@ shown in Figure~\ref{fig:tc02_classical}.
 
 
 
-The UHRC achieved a success rate of 25\% (7 of 30 trials), with a mean RMSE of
-7.193\,m, IAE of 73.128\,m\,s, and PLR of 1.09. Despite the low success rate, it is observed 
-in Figure~\ref{fig:tc02_uhrc-pid} that the UHRC's approach trajectory is navigates around the corridor with a smooth and directed path. 
-Indicating that the UHRC does not directly encodes the corridor as a navigable passage, suggesting that the trained policy mapped the lidar readings in the data with large attitude references leading to the planned flight path was suboptimal by obversation. 
+The UHRC achieved 25\% success (7 of 30 trials), with a mean RMSE of 7.193\,m, an IAE of 73.128\,m\,s and a PLR of 1.09.
+Despite this low success rate, Figure~\ref{fig:tc02_uhrc-pid} shows a smooth and directed approach trajectory around the corridor.
+This indicates that the UHRC does not directly represent the corridor as a navigable passage.
+The trajectory instead suggests that the trained policy mapped the LiDAR readings to large attitude references, resulting in the observed suboptimal flight path.
 
 \subsection{TC03: Gap Navigation}
 \label{sec:tc03}
 
-TC03 places two obstacles forming a 3\,m gap directly in the nominal flight path,
-testing the precision of gap identification and the control accuracy required to pass
-through without collision. The classical controller achieved 100\% success with a RMSE
-of 0.631\,m and a PLR of 1.158. A* identified the gap and generated a path through it
-in all trials; however, several trials exhibited near-miss events during gap transit,
-attributable to waypoint discretisation at the 2.0\,m grid resolution and the
-replanning latency at 10\,Hz, which together prevent precise path placement relative
-to obstacle surfaces.
+TC03 evaluates gap identification and the control precision needed for collision-free traversal by placing two obstacles with a 3\,m separation directly in the nominal flight path.
+The classical controller achieved 100\% success, with an RMSE of 0.631\,m and a PLR of 1.158.
+A* identified the gap and planned a path through it in every trial.
+Near-miss events were nevertheless observed during several gap transits.
+These are attributable to waypoint discretization at the 2.0\,m grid resolution and replanning latency at 10\,Hz, which together prevent precise path placement relative to the obstacle surfaces.
 
-The UHRC achieved a success rate of 20\% with a mean RMSE of 9.25\,m and a PLR of
-1.47. The trajectory in Figure~\ref{fig:tc03_uhrc-pid} shows that the UHRC's approach trajectory is smooth and
-accurately directed toward the gap, indicating that the UHRC
-correctly encodes the gap as a navigable passage. 
+The UHRC achieved 20\% success, with a mean RMSE of 9.25\,m and a PLR of 1.47.
+Figure~\ref{fig:tc03_uhrc-pid} shows a smooth approach trajectory directed accurately toward the gap, indicating that the UHRC correctly represents the gap as a navigable passage.
 
 \begin{figure*}[ht]
     \centering
@@ -1243,34 +1431,22 @@ correctly encodes the gap as a navigable passage.
 \label{sec:tc04}
 
 
-TC04 reveals the most significant result of the evaluation. Obstacles
-are hidden from both controllers' sensor streams until $t \geq 3.0$\,s, at which
-point they are revealed within the drone's active flight. The classical
-controller recorded a 0\% success rate across all 30 trials, as
-shown in Figure~\ref{fig:tc04}.
+TC04 provides the most significant finding of the evaluation.
+Obstacles are withheld from both sensor streams until $t \geq 3.0$\,s, when they are revealed during flight.
+The classical controller failed in all 30 trials, giving a 0\% success rate, as shown in Figure~\ref{fig:tc04}.
 
-The classical controller's failure is structural, obstacle detection is contingent on
-the LiDAR scan being projected into the occupancy grid and a revised waypoint sequence
-being computed by A* and propagated to the pure-pursuit tracker. The pipeline
-introduces a latency between obstacle emergence and the availability of an updated
-reference trajectory. During this window the low-level PID continues executing the
-prior trajectory, and the collision occurs before replanning can redirect the vehicle,
-as the trajectory in Figure~\ref{fig:tc04_classical} confirms. This latency is
-inherent to the fixed supervisory-regulatory interface and is not addressable by
-tuning within the existing architecture.
+The failure of the classical controller follows from its architecture.
+Obstacle detection requires projection of the LiDAR scan into the occupancy grid, computation of a revised A* waypoint sequence and propagation of that sequence to the pure-pursuit tracker.
+A delay therefore occurs between obstacle revelation and the availability of an updated reference trajectory.
+During this interval, the low-level PID continues to track the previous trajectory, causing collision before replanning can redirect the vehicle, as confirmed by Figure~\ref{fig:tc04_classical}.
+The delay is inherent to the fixed supervisory-regulatory interface and cannot be removed by tuning the existing architecture.
 
-In trials where the UHRC-PID fails, is attributable to the policy instability that dominates all
-test cases: the drone diverges from the nominal path before reaching the obstacle
-rather than colliding with it. Minor erratic
-atittitude predictions arise immediately after carry initialisation, consistent with the
-policy encountering out-of-distribution states that compound before the obstacle is
-ever revealed at $t = 3.0$\,s. Crucially, however, in the trials where the UHRC
-remained on a coherent flight path until $t = 3.0$\,s , as shown in Figure~\ref{fig:tc04_uhrc-pid}, the 32-ray LiDAR scan
-immediately reflected the newly revealed obstacle returns, and the observation
-embedding was updated within the same H-L reasoning cycle. This architecture-level
-reactivity replanning latency bounded by a single 10\,ms inference call rather
-than a 100\,ms pipeline cycle represents the key structural advantage of unified
-reasoning over explicit hierarchical decomposition for dynamic scenarios.
+Failures of the UHRC-PID in this test case are attributable to the policy instability that dominates all test cases.
+The drone diverges from its nominal path before reaching the obstacle, instead of colliding with it.
+Small erratic attitude predictions appear immediately after carry initialization, consistent with the accumulation of out-of-distribution states before obstacle revelation at $t = 3.0$\,s.
+Notably, however, in trials where a coherent flight path was maintained until $t = 3.0$\,s, as shown in Figure~\ref{fig:tc04_uhrc-pid}, the 32-ray LiDAR scan immediately registered the newly revealed obstacle, and the observation embedding was updated within the same H-L reasoning cycle.
+The resulting replanning latency is bounded by a single 10\,ms inference call, compared with the 100\,ms pipeline cycle.
+This direct response constitutes the principal structural advantage of unified reasoning over explicit hierarchical decomposition in dynamic scenarios.
 
 \begin{figure*}[ht]
     \centering
@@ -1298,27 +1474,18 @@ reasoning over explicit hierarchical decomposition for dynamic scenarios.
 
 \subsection{TC05: Parametric Robustness}
 \label{sec:tc05}
-TC05 applies simultaneous parametric perturbations to the plant dynamics (mass
-$\pm 20\%$, diagonal inertia $\pm 30\%$, drag coefficients $\pm 50\%$) over the TC02 corridor configuration. The two
-controllers exhibit contrasting responses that directly characterise the
-performance-robustness boundary between learned and classical architectures.
+TC05 retains the corridor arrangement of TC02 while simultaneously perturbing the plant parameters (mass $\pm 20\%$, diagonal inertia $\pm 30\%$, drag coefficients $\pm 50\%$).
+The contrasting responses of the controllers characterize the performance-robustness boundary between learned and classical architectures.
 
-The classical controller achieved 100\% success across all 30 perturbed trials with
-a mean RMSE of 0.707\,m, an IAE of 13.346\,m\,s, and a PLR of 1.227, as shown in
-Figure~\ref{fig:tc05_classical}. These metrics are comparable to the nominal TC01 and
-TC03 results, demonstrating bounded performance degradation under significant
-parametric variation. The thrust output under perturbed conditions (2814.94\,Nm) was elevated
-relative to the nominal TC01 baseline (5136.5\,Nm), consistent with the integral term
-actively compensating for reduced effective hover thrust.
+As shown in Figure~\ref{fig:tc05_classical}, the classical controller achieved 100\% success over all 30 perturbed trials, with a mean RMSE of 0.707\,m, an IAE of 13.346\,m\,s and a PLR of 1.227.
+The metrics remain comparable to the nominal TC01 and TC03 results, demonstrating bounded performance degradation despite significant parametric variation.
+The thrust output under perturbed conditions (2814.94\,Nm) was elevated relative to the nominal TC01 baseline (5136.5\,Nm), which is consistent with the integral term actively compensating for the reduced effective hover thrust.
 
-The UHRC achieved a success rate of 33.3\% (10 of 30 trials) under TC05 conditions,
-with a mean RMSE of 58.675\,m and an ITAE of 73{,}011.560\,m\,s$^2$. A direct
-comparison between the UHRC under nominal and perturbed conditions is shown in
-Figure~\ref{fig:tc05_uhrc_compare}: under nominal dynamics
-(Figure~\ref{fig:tc05_uhrc_nominal}) the policy executes a coherent straight-line
-transit, while under 20\% model uncertainty
-(Figure~\ref{fig:tc05_uhrc-pid_torque}) the trajectory deviates  from the
-intended path. The error metrics are not as informative here, since different intial positions and goals are used for each trial, however the qualitative trajectory comparison shows that the suboptimal path is a result of pertutbed parameters.
+Under TC05 conditions, the UHRC achieved 33.3\% success (10 of 30 trials), with a mean RMSE of 58.675\,m and an ITAE of 73{,}011.560\,m\,s$^2$.
+Figure~\ref{fig:tc05_uhrc_compare} compares the UHRC trajectories under nominal and perturbed dynamics.
+The nominal case (Figure~\ref{fig:tc05_uhrc_nominal}) shows a coherent straight-line transit, whereas 20\% model uncertainty (Figure~\ref{fig:tc05_uhrc-pid_torque}) causes the trajectory to deviate from the intended path.
+The error metrics are less informative in this comparison because the trials use different initial positions and goals.
+Nevertheless, the qualitative trajectory comparison shows that the perturbed parameters produce the suboptimal path.
 
 
 
@@ -1358,135 +1525,94 @@ intended path. The error metrics are not as informative here, since different in
     \label{fig:tc05_uhrc-pid_torque}
 \end{figure}
 
-The torque magnitude output under perturbed conditions, shown in
-Figure~\ref{fig:tc05_uhrc-pid_torque}, exhibits high oscillations around the nominal hover torque which is expected, 
-as the PID handles the low-level stabilization, but the UHRC's torque predictions are not robust to the parametric uncertainty, as a small error in the attitude references is predicted, the PID loop makes up for this by correcting the attitude
-and compensates for the prediction errors. 
+Under perturbed conditions, the torque magnitude in Figure~\ref{fig:tc05_uhrc-pid_torque} exhibits large oscillations about the nominal hover torque.
+This behavior is expected, since the PID performs low-level stabilization, but the UHRC torque predictions are not robust to parametric uncertainty.
+When small prediction errors occur in the attitude references, the PID loop compensates for them through corrective attitude action.
+
 \section{Discussion}
 \label{sec:discussion}
 
-The results across TC01--TC05 reveal a consisten
-picture. The classical controller's failures remain architecturally deterministic: the 
-supervisory-regulatory interface introduces a replanning latency that is structurally 
-irreducible without redesigning the pipeline. The UHRC-PID, conversely, demonstrates 
-superior reactive spatial reasoning in dynamic environments, leveraging the inner-loop PID for rigid-body 
-stabilization while the outer-loop neural network handles kinematic guidance. The two 
-architectures therefore fail and succeed in qualitatively different ways that reveal 
-complementary design boundaries.
+The results from TC01--TC05 reveal a consistent picture of the two control architectures.
+Failures of the classical controller are architecturally deterministic, owing to the replanning delay imposed by the supervisory-regulatory interface, which cannot be reduced without redesigning the pipeline.
+The UHRC-PID, meanwhile, exhibits superior reactive spatial reasoning in dynamic environments, relying on the inner-loop PID for rigid-body stabilization while the outer-loop neural network handles kinematic guidance.
+Their differing modes of success and failure therefore identify complementary limits of the two designs.
 
 \subsection{Policy Stability and Guidance Efficacy}
 \label{sec:discuss_stability}
 
-The implementation of the cascaded architecture serves as a proof of principle, that the UHRC can 
-achieve highly effective goal-directed navigation under nominal conditions. By delegating 
-high-frequency attitude regulation to the inner-loop PID controller, the outer-loop is freed from the burden of compensating for fast rotational dynamics, thereby 
-mitigating the distributional compounding problem \parencite{le_mero_survey_2022, block_is_2024}. 
+The cascaded implementation provides a proof of principle that the UHRC can achieve highly effective goal-directed navigation under nominal conditions.
+The inner-loop PID performs high-frequency attitude regulation, removing the need for the outer loop to compensate for fast rotational dynamics.
+By extension, this mitigates the accumulation of distributional errors \parencite{le_mero_survey_2022, block_is_2024}.
 
-The integral correction mechanism of the classical inner loop provides a continuous 
-restoring force against transient deviations. Consequently, in a representative open-field 
-transit (TC01), the hybrid architecture achieved a Path Length Ratio (PLR) of 1.010, an 
-Integral Absolute Error (IAE) of 37.092\,m$\cdot$s, and a Root Mean Square Error (RMSE) of 
-8.362\,m. These metrics confirm that when the episode is protected from unbounded attitude 
-divergence, the learned spatial reasoning is functionally correct. The 
-conclusion is that the spatial planning component of the UHRC has potential to be stable for 
-long-horizon closed-loop operation once decoupled from low-level action generation.
+The classical inner loop supplies a continuous restoring force against transient deviations through integral correction.
+In a representative open-field transit (TC01), the resulting hybrid achieved a PLR of 1.010, an IAE of 37.092\,m$\cdot$s and an RMSE of 8.362\,m.
+These metrics confirm the functional correctness of the learned spatial reasoning when unbounded attitude divergence is prevented.
+Thus, the spatial planning component of the UHRC has the potential for stable long-horizon closed-loop operation when decoupled from low-level action generation.
 
 
 
 \subsection{Overcoming the Information Bottleneck: TC02 and TC03}
 \label{sec:discuss_bottleneck}
 
-The theoretical motivation for the UHRC is resolving the information bottleneck at the
-classical controller's supervisory-regulatory interface: the A* planner transmits
-only a waypoint sequence to the low-level PID, discarding all contextual
-information about obstacle proximity and local geometry \parencite{kolchinsky_nonlinear_2019,
-abdelmaksoud_control_2020}. The TC02 and TC03 results provide strong empirical
-evidence for this hypothesis. The classical controller exhibits lateral oscillation 
-around the planned path near obstacle surfaces, attributable to the pure-pursuit tracker 
-consuming only positional waypoints and having no representation of adjacent obstacle clearance. 
+The theoretical motivation for the UHRC is to resolve the information bottleneck at the classical supervisory-regulatory interface.
+The A* planner supplies only a waypoint sequence to the low-level PID, discarding all contextual information associated with obstacle proximity and local geometry \parencite{kolchinsky_nonlinear_2019, abdelmaksoud_control_2020}.
+The TC02 and TC03 results provide strong empirical support for this hypothesis.
+Near obstacle surfaces, the classical controller oscillates laterally about the planned path.
+This behavior is attributable to the pure-pursuit tracker receiving only positional waypoints, without any representation of clearance from neighboring obstacles.
 
-The UHRC-PID's trajectories in constrained scenarios show qualitatively smoother clearance 
-geometry, consistent with the unified observation vector providing the L-module with direct 
-access to LiDAR returns during attitude intent computation. For example, during symmetric corridor
-transit (TC02), the UHRC-PID achieved a PLR of 1.081, although from observation, the flight path was suboptimal,
-as compared to the classical controller. Similarly, during gap navigation (TC03), the model recorded a PLR of 1.171 and 
-an RMSE of 6.455\,m. Because basic policy stability is maintained by the inner loop, the UHRC 
-successfully demonstrates its architectural advantage in constrained geometric environments. 
+The UHRC-PID trajectories exhibit qualitatively smoother clearance geometry in the constrained scenarios.
+This agrees with the L-module having direct access to LiDAR returns through the unified observation vector when computing attitude intent.
+During symmetric corridor transit (TC02), for example, the UHRC-PID achieved a PLR of 1.081, although the observed flight path was suboptimal relative to that of the classical controller.
+During gap navigation (TC03), the corresponding PLR was 1.171 and the RMSE was 6.455\,m.
+Because basic policy stability is maintained by the inner loop, the UHRC successfully demonstrates its architectural advantage in constrained geometric environments.
 
 \subsection{Architectural Highlights in Dynamic Environments: TC04}
 \label{sec:discuss_tc04}
 
-TC04 reveals the most architecturally significant result of the evaluation, showcasing 
-where the learned hierarchy explicitly outperforms classical explicit decomposition. 
-Obstacles are hidden from both controllers' sensor streams until $t \geq 3.0$\,s, at which
-point they are revealed within the drone's active flight path. 
+TC04 provides the most architecturally significant result of the evaluation, demonstrating where the learned hierarchy explicitly outperforms classical explicit decomposition.
+Obstacles are withheld from both controllers' sensor streams until $t \geq 3.0$\,s and are then revealed in the drone's active flight path.
 
-The classical controller's failure is displayed in obstacle detection being contingent on the 
-LiDAR scan being projected into the occupancy grid and a revised waypoint sequence being 
-computed by A* and propagated to the pure-pursuit tracker. This latency window ensures 
-collision before replanning can redirect the vehicle \parencite{li_hierarchical_2023, 
-zhu_hierarchical_2024}. This latency is inherent to the fixed supervisory-regulatory 
-interface and is not addressable by tuning.
+The classical controller must first project the LiDAR scan into the occupancy grid, recompute the A* waypoint sequence and transmit the revised path to the pure-pursuit tracker.
+The resulting delay causes collision before replanning can redirect the vehicle \parencite{li_hierarchical_2023, zhu_hierarchical_2024}.
+This delay is inherent to the fixed supervisory-regulatory interface and cannot be addressed through tuning.
 
-Conversely, the UHRC-PID successfully navigated the dynamic environment. A representative 
-successful trial yielded a PLR of 3.104, an IAE of 178.014\,m$\cdot$s, and an RMSE of 9.001\,m. 
-The LiDAR observation was updated within the same 10\,ms inference cycle as the obstacle 
-revelation, and the observation embedding reflected the new obstacle geometry immediately in 
-the next H-L reasoning cycle. This architecture-level reactivity—replanning latency bounded 
-by a single inference call. This represents the key structural 
-advantage of unified reasoning over explicit hierarchical decomposition for dynamic scenarios.
+The UHRC-PID, however, successfully navigated the dynamic environment.
+A representative successful trial achieved a PLR of 3.104, an IAE of 178.014\,m$\cdot$s and an RMSE of 9.001\,m.
+The LiDAR observation was updated during the same 10\,ms inference cycle in which the obstacle was revealed, with the new geometry immediately represented in the observation embedding of the next H-L reasoning cycle.
+Bounding the replanning latency by a single inference call gives unified reasoning its principal structural advantage over explicit hierarchical decomposition in dynamic scenarios.
 
 \subsection{Distributional Fragility vs Integral Robustness: TC05}
 \label{sec:discuss_robustness}
 
-TC05 most directly characterises the fundamental trade-off between the two
-architectures under simultaneous perturbations of mass ($\pm 20\%$), inertia ($\pm 30\%$), 
-drag ($\pm 50\%$), and thrust coefficient ($\pm 15\%$). 
+TC05 most directly characterizes the fundamental trade-off between the architectures under simultaneous perturbations of mass ($\pm 20\%$), inertia ($\pm 30\%$), drag ($\pm 50\%$) and thrust coefficient ($\pm 15\%$).
 
-The classical controller's success demonstrates that its cascaded integral feedback is a 
-principled and highly effective mechanism for parametric robustness. Deviations in effective 
-plant dynamics are treated as persistent disturbances by the PID integrators and compensated 
-continuously, without any requirement for the controller to have knowledge of the perturbation 
-magnitude.
+The classical controller's success demonstrates that its cascaded integral feedback is a principled and highly effective mechanism for parametric robustness.
+The PID integrators treat changes in the effective plant dynamics as persistent disturbances, compensating for them continuously without requiring knowledge of their magnitude.
 
-The UHRC-PID demonstrates similar performance, though it still reflects a degree of distributional fragility. 
-Behavioural cloning on a single nominal dynamic model produces a policy whose implicit representation of spatial 
-kinematics is calibrated exclusively to the nominal parameter set \parencite{le_mero_survey_2022}. 
-Analysis of the control inputs under perturbed conditions reveals elevated thrust commands 
-(maintaining approximately 11.8\,N instead of the nominal 9.81\,N hover thrust), which is expected. As for the attitude commands, although a bounded contraint was enforced for trainig the UHRC, the model still produced  
-high-frequency torque oscillations accounted for by prediction errors in attidtude references. The PID loop compensates for these errors, but the overall trajectory is still suboptimal. 
+The UHRC-PID achieves similar performance, although some distributional fragility remains.
+Training through behavioral cloning on a single nominal dynamic model calibrates the policy's implicit representation of spatial kinematics exclusively to the nominal parameter set \parencite{le_mero_survey_2022}.
+Under perturbed conditions, the control inputs exhibit the expected increase in thrust, maintaining approximately 11.8\,N compared with the nominal hover thrust of 9.81\,N.
+Despite the attitude bounds imposed during training, prediction errors in the attitude references still produce high-frequency torque oscillations.
+The PID compensates for these errors, but the overall trajectory remains suboptimal.
 
-Despite these uncertainties, a successful perturbed transit achieved a PLR of 1.066, an IAE of 
-63.861\,m$\cdot$s, and an RMSE of 4.391\,m. This demonstrates that grounding the execution in 
-classical PID logic successfully anchors the degraded kinematic guidance of the HRM, establishing 
-a significantly wider stability margin even when the outer-loop predictions degrade.
+Despite the uncertainties, a successful perturbed transit achieved a PLR of 1.066, an IAE of 63.861\,m$\cdot$s and an RMSE of 4.391\,m.
+This shows that grounding the execution in classical PID logic anchors the degraded kinematic guidance of the HRM, providing a significantly wider stability margin even as the outer-loop predictions deteriorate.
 
 \section{Conclusion}
 \label{sec:conclusion}
 
-This paper presented the Unified Hierarchical Reasoning Controller (UHRC), the
-first systematic application of the Hierarchical Reasoning Model (HRM) architecture
-to a continuous nonlinear closed-loop control system. The model was ultimately formulated 
-as a cascaded UHRC-PID hybrid, where a recurrent transformer outer-loop generates attitude 
-intent, and a classical inner-loop handles high-frequency rigid-body stabilization. 
-The comparative evaluation against a classical SLAM-augmented cascaded PID baseline
-across five structured test cases produced principal findings. First, the HRM architecture 
-can learn a highly functional continuous control policy when timescale separation is 
-respected. Second, the cascaded UHRC-PID architecture successfully addresses the compounding 
-error limitations that act as the primary obstacle to reliable deployment in monolithic 
-end-to-end networks. Third, the unified architecture explicitly outperforms the classical 
-baseline in dynamic environments (TC04), leveraging single-step inference reactivity to 
-bypass structural replanning latencies. Finally, while the hybrid model improves general 
-robustness, classical integral feedback remains the superior paradigm for rejecting 
-severe, unmodelled parametric uncertainty.
+In this work, we developed the Unified Hierarchical Reasoning Controller (UHRC), constituting the first systematic application of the Hierarchical Reasoning Model (HRM) architecture to a continuous nonlinear closed-loop control system.
+The model was ultimately formulated as a cascaded UHRC-PID hybrid, pairing a recurrent transformer outer loop, which generates attitude intent, with a classical inner loop for high-frequency rigid-body stabilization.
+Comparison with a classical SLAM-augmented cascaded PID baseline over five structured test cases established the principal findings of the study.
+Firstly, the HRM architecture can learn a highly functional continuous control policy when timescale separation is respected.
+Secondly, the cascaded formulation successfully addresses the compounding errors which constitute the main limitation to reliable deployment of monolithic end-to-end networks.
+Thirdly, single-step inference allows the unified architecture to bypass structural replanning delays and outperform the classical baseline in dynamic environments (TC04).
+Finally, although the hybrid improves general robustness, classical integral feedback remains superior in rejecting severe, unmodelled parametric uncertainty.
 
-The primary direction for future work is domain randomisation during training,
-which directly addresses residual distributional fragility without architectural modification. Use of an ideal controller, in replace of the PID regulators to further improve the accurancy of the learned mode.
-Finally, reinforcement learning fine-tuning from the behaviourally cloned initialisation
-would further allow the policy to discover corrective strategies absent from the offline 
-expert. Beyond these immediate extensions, the UHRC framework provides a principled foundation 
-for investigating whether unified hierarchical reasoning can serve as the definitive 
-outer-loop guidance architecture for complex autonomous systems.
+Future work will primarily consider domain randomization during training, which directly addresses the remaining distributional fragility without modifying the architecture.
+Replacement of the PID regulators with an ideal controller will also be investigated to improve the accuracy of the learned model.
+RL fine-tuning from the behaviorally cloned initialization would further permit the discovery of corrective strategies absent from the offline expert.
+Beyond these extensions, the UHRC framework provides a systematic basis for investigating whether unified hierarchical reasoning can serve as the definitive outer-loop guidance architecture for complex autonomous systems.
 \printbibliography
 
 \end{document}
