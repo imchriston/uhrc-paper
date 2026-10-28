@@ -22,6 +22,11 @@
 \usepackage{float}
 \usepackage{amsthm}
 \usepackage{mathtools}
+\providecommand{\uhrcNorm}[1]{\left\lVert #1\right\rVert_2}
+\providecommand{\uhrcPNorm}[1]{\left\lVert #1\right\rVert_P}
+\providecommand{\uhrcANorm}[1]{\left\lVert #1\right\rVert_{P_a}}
+\providecommand{\uhrcSat}{\operatorname{sat}}
+\providecommand{\uhrcDiag}{\operatorname{diag}}
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}{Lemma}
 \newtheorem{proposition}{Proposition}
@@ -51,8 +56,8 @@
 }
 
 \date{
-    \textsuperscript{1,3,4}Dept. of Electrical and Comp. Engineering, UWI St.Augustine \\
-    \textsuperscript{2}Artificial Intelligence Innovation Centre, UWI St.Augustine \\
+    \textsuperscript{1,2,3,4}Dept. of Electrical and Comp. Engineering, UWI St.Augustine \\
+    \textsuperscript{1,2,3,4}Artificial Intelligence Innovation Centre, UWI St.Augustine \\
     \small Corresponding Author: \href{mailto:nuneschriston20@gmail.com}{nuneschriston20@gmail.com}
 }
 
@@ -617,596 +622,759 @@ An episode is successful when the vehicle reaches within 0.5\,m of the goal with
 \subsection{Stability Analysis}
 \label{sec:stability}
 
+The neural policy supplies attitude references to a fixed-gain, torque-saturated
+inner loop. We establish regional input-to-state stability for the ideal
+rotational plant under initial-state, reference-increment, and disturbance
+constraints, and a separate active-saturation result for pure-axis motion.
+Position convergence and collision avoidance require additional arguments.
+
 \subsubsection{Standing Assumptions}
-Let $\boldsymbol{\eta}=[\phi,\theta,\psi]^\top$ denote Euler attitude,
-$\boldsymbol{\omega}_B$ body rate, and
-$\boldsymbol{\eta}_r=[\phi_{\mathrm{ref}},\theta_{\mathrm{ref}},0]^\top$
-the commanded attitude.
-\begin{description}
-\item[Assumption 1:] The operating domain has
-$|\phi|,|\theta|\le\pi/6$, a fixed smooth angle-error branch,
-and torque limits $(0.6,0.6,0.35)\,\mathrm{Nm}$. The certificate uses ideal applied body torques.
-\item[Assumption 2:] The physical rotational model is
-$J\dot{\boldsymbol{\omega}}_B
-=\boldsymbol{\tau}-D_\omega\boldsymbol{\omega}_B
--\boldsymbol{\omega}_B\times J\boldsymbol{\omega}_B$
- and standard  Euler kinematics
-$\dot{\boldsymbol{\eta}}=\mathcal T(\boldsymbol{\eta})\boldsymbol{\omega}_B$.
-The local approximation $\mathcal T(0)=I_3$ defines the nominal
-linear model. 
-\item[Assumption 3:] Applied roll/pitch references are bounded by
-$\pi/6$. Continuous-reference error equations additionally assume
-$\boldsymbol{\eta}_r\in W^{2,\infty}$ with specified derivative bounds.
+\label{uhrc:sec:model}
 
-\item[Assumption 4:] Actual thrust satisfies $0\le T(t)\le T_{\max}$,
-and horizontal drag satisfies $C_h=C_h^\top\ge c_{\min}I_2$,
-$c_{\min}>0$.
-\end{description}
-
-\subsubsection{Inner Loop: Attitude Stabilization}
-\label{sec:inner_loop}
-
-With $e_\phi=\phi_{\mathrm{ref}}-\phi$, the implemented unsaturated
-PD law is $\tau_\phi=K_p e_\phi-K_d p$.
-Under $p\simeq\dot\phi$, the nominal local roll-error equation is
+Let $\eta=(\phi,\theta,\psi)^\top$ and
+$\omega_B=(p,q,r)^\top$ denote Euler angles and body angular rates,
+respectively. In particular, $q$ here is a body rate, not a quaternion. The
+rotational plant is
 \begin{equation}
-\begin{aligned}
- I_{xx}\ddot e_\phi+(K_d+d_x)\dot e_\phi+K_p e_\phi&=d_\phi(t),\\
- d_\phi&=I_{xx}\ddot\phi_{\mathrm{ref}}
- +(K_d+d_x)\dot\phi_{\mathrm{ref}}-\Delta_\phi.
-\end{aligned}
-\label{eq:err_roll}
+ \dot\eta=\mathcal T(\phi,\theta)\omega_B,\qquad
+ J\dot\omega_B=\tau-D\omega_B-\omega_B\times(J\omega_B)+w(t),
+ \label{uhrc:eq:plant}
 \end{equation}
-Here $d_x$ is rotational damping and $\Delta_\phi$ collects the remaining
-terms in the local roll representation. For the exact nonlinear model,
-kinematic residuals must be included as well as gyroscopic coupling.
-In state form $\mathbf e=[e_\phi,\dot e_\phi]^\top$,
+where
 \begin{equation}
- \dot{\mathbf e}=A\mathbf e+Bd_\phi,\quad
- A=\begin{bmatrix}0&1\\-K_p/I_{xx}&-(K_d+d_x)/I_{xx}\end{bmatrix},
- \quad B=\begin{bmatrix}0\\1/I_{xx}\end{bmatrix}.
- \label{eq:err_state}
-\end{equation}
-
-\begin{theorem}[Nominal Inner-Loop Exponential Stability]
-\label{thm:inner}
-For $I_{xx}>0$, $A$ is Hurwitz if and only if
-$K_p>0$ and $K_d+d_x>0$.
-For any $Q=Q^\top>0$, the equation $A^\top P+PA=-Q$ has a unique
-$P=P^\top>0$. With $d_\phi=0$,
-\begin{equation}
- \|\mathbf e(t)\|\le C\|\mathbf e(0)\|e^{-\alpha t},
- \quad C=\sqrt{\frac{\lambda_{\max}(P)}{\lambda_{\min}(P)}},
- \quad \alpha=\frac{\lambda_{\min}(Q)}{2\lambda_{\max}(P)}.
- \label{eq:les_bound}
-\end{equation}
-\end{theorem}
-\begin{proof}
-Routh--Hurwitz applied to
-$\lambda^2+(K_d+d_x)\lambda/I_{xx}+K_p/I_{xx}$
-gives the stated conditions. For $V=\mathbf e^\top P\mathbf e$,
-$\dot V=-\mathbf e^\top Q\mathbf e$ and
-$\lambda_{\min}(P)\|\mathbf e\|^2\le V
-\le\lambda_{\max}(P)\|\mathbf e\|^2$.
-Comparison gives \eqref{eq:les_bound}
-\parencite{khalil_nonlinear_2002}.
-This establishes the nominal result, a nonlinear extension requires
-the quantitative conditions stated below.
-\end{proof}
-
-\begin{corollary}[Nominal Inner-Loop ISS]
-\label{cor:iss}
-For every admissible fixed pair $(K_p,K_d)$, every $Q>0$, and every
-$\kappa\in(0,1)$, the nominal linear system \eqref{eq:err_state} is
-globally ISS with respect to its effective input $d_\phi$, with
-\begin{equation}
- \gamma_{Q,\kappa}(s)
- =C\,\frac{2\|PB\|}{\kappa\lambda_{\min}(Q)}\,s.
- \label{eq:iss_gain}
-\end{equation}
-For $D_t=\|d_\phi\|_{\infty,[0,t]}$, a corresponding state estimate is
-\begin{equation}
- \|\mathbf e(t)\|\le\max\left\{
- Ce^{-(1-\kappa)\alpha t}\|\mathbf e(0)\|,
- \gamma_{Q,\kappa}(D_t)\right\}.
- \label{eq:iss_state_bound}
-\end{equation}
-Globality, refers to the linear model.
-\end{corollary}
-\begin{proof}
-On any fixed interval $[0,t]$, let
-$q=\lambda_{\min}(Q)$ and $D=D_t$. Then
-\[
- \dot V\le-q\|\mathbf e\|^2+2\|PB\|\|\mathbf e\|D.
-\]
-For every $\kappa\in(0,1)$ and
-$\|\mathbf e\|\ge\rho(D)=2\|PB\|D/(\kappa q)$,
-$\dot V\le-(1-\kappa)q\|\mathbf e\|^2$.
-The sublevel set $V\le\lambda_{\max}(P)\rho(D)^2$ is invariant
-on this interval and has outer radius at most $C\rho(D)$.
-Above that level,
-$\dot V\le-2(1-\kappa)\alpha V$, comparison gives
-\eqref{eq:iss_state_bound} and hence \eqref{eq:iss_gain}.
-\end{proof}
-
-\begin{proposition}[Inner-Loop ISS]
-\label{prop:sampled_iss}
-For sample period $h>0$, let
-\[
- A_0=\begin{bmatrix}0&1\\0&-d_x/I_{xx}\end{bmatrix},\quad
- B_0=\begin{bmatrix}0\\1/I_{xx}\end{bmatrix},\quad
- \Phi=e^{A_0h},\quad\Gamma=\int_0^h e^{A_0s}B_0\,ds.
-\]
-With held torque, set $S=\operatorname{diag}(-1,1)$,
-$M=S(\Phi-\Gamma[K_p\ K_d])S$, $E=(1,0)^\top$, and $H=S\Gamma$.
-For $y_k=(e_{\phi,k},p_k)^\top$ and
-$\delta r_k=\phi_{\mathrm{ref},k+1}-\phi_{\mathrm{ref},k}$,
-the nominal update is
-$y_{k+1}=My_k+E\delta r_k+Hd_k$,
-where $d_k$ is an additive torque held over the interval.
-This system is ISS if and only if $M$ is Schur. For real $2\times2$
-$M$, this is equivalent to
-\begin{equation}
- 1-\operatorname{tr}M+\det M>0,\quad
- 1+\operatorname{tr}M+\det M>0,\quad
- 1-\det M>0.
- \label{eq:sampled_admissible}
-\end{equation}
-For any $Q_d>0$, let $M^\top P_dM-P_d=-Q_d$ and define
-\[
- p_+=\lambda_{\max}(P_d),\quad p_-=\lambda_{\min}(P_d),\quad
- C_d=\sqrt{p_+/p_-},\quad
- \rho_d=\sqrt{1-\lambda_{\min}(Q_d)/p_+}.
-\]
-Here $p_+$ denotes the maximum and $p_-$ the minimum eigenvalue.
-Then
-\begin{equation}
- \|y_k\|\le C_d\rho_d^k\|y_0\|+g_rR_k+g_dW_k,\qquad
- g_r=\frac{\|E\|_{P_d}}{\sqrt{p_-}(1-\rho_d)},\quad
- g_d=\frac{\|H\|_{P_d}}{\sqrt{p_-}(1-\rho_d)},
- \label{eq:sampled_bound}
-\end{equation}
-where $\|v\|_{P_d}=\sqrt{v^\top P_dv}$,
-$R_k=\sup_{j<k}|\delta r_j|$, and $W_k=\sup_{j<k}|d_j|$,
-with indices $0\le j<k$ and empty suprema zero.
-\end{proposition}
-\begin{proof}
-The discrete Lyapunov identity gives
-$\|My\|_{P_d}\le\rho_d\|y\|_{P_d}$.
-The triangle inequality and the geometric-series bound yield
-\eqref{eq:sampled_bound}. The Schur conditions
-\eqref{eq:sampled_admissible} are the second-order unit-circle
-criterion. General within-interval inputs are handled by bounding their
-integrated contribution in the same weighted norm.
-\end{proof}
-
-Define the nominal admissible attitude-PID set for axis $i$ by
-\begin{equation}
-\begin{aligned}
- \mathcal K_i(h)=\bigl\{(K_p,K_i,K_d):\;&K_i=0,\ K_p>0,\ K_d+d_i>0,\\
- &1-\operatorname{tr}M_i+\det M_i>0,\\
- &1+\operatorname{tr}M_i+\det M_i>0,\quad1-\det M_i>0\bigr\}.
- \label{eq:pid_admissible_set}
-\end{aligned}
-\end{equation}
-Here $M_i$ is the held-torque matrix above with the inertia and damping
-of axis $i$. Thus $\mathcal K=\mathcal K_\phi\times\mathcal K_\theta
-\times\mathcal K_\psi$ satisfies both the continuous Hurwitz and sampled
-Schur tests. This is a PD subset of PID parameter space; it makes no
-claim for nonzero attitude integral gains. Nonlinear admissibility also
-requires the state and reference conditions below.
-For a concrete certified subset, let
-\begin{equation}
- \mathcal K_{\mathrm{box}}=
- \left\{K\in\mathcal K:
- 0.98K_{p,i}^0\le K_{p,i}\le1.02K_{p,i}^0,\quad
- 0.98K_{d,i}^0\le K_{d,i}\le1.02K_{d,i}^0\right\},
- \label{eq:pid_box}
-\end{equation}
-where the nominal attitude gains $K_{p,i}^0,K_{d,i}^0$ are listed in
-Table~\ref{tab:gains}. A common certificate below verifies the whole
-box, not just its nominal member. UHRC chooses references, not these gains.
-
-\begin{remark}[Choice of ISS bound]
-The original Lyapunov argument applies to every $Q>0$ and
-$\kappa\in(0,1)$, generating a family of valid ISS bounds.
-Changing these choices changes the certificate, not the deployed PID.
-The numerical value below is one example; it is not an extra stability
-assumption. Arbitrary PID gain variation is a different question and
-is not covered by this statement.
-\end{remark}
-
-\begin{table}[ht]
-\centering
-\small
-\caption{Calculated poles of the unsaturated hover linearization.
-$K_i=0$ for roll/pitch/yaw; $K_i=61$ for altitude. All listed
-linearizations are Hurwitz.}
-\label{tab:gains}
-\begin{tabular}{lrrl}
-\toprule
-Channel & $K_p$ & $K_d$ & Poles ($\mathrm{s}^{-1}$)\\
-\midrule
-Roll & 11.3425 & 0.49581 & $-31.574\pm19.655\,\mathrm{i}$\\
-Pitch & 11.3425 & 0.49581 & $-31.574\pm19.655\,\mathrm{i}$\\
-Yaw & 0.9848 & 0.9542 & $-67.337,\ -1.024$\\
-Altitude & 153 & 135 & $-134.051,\ -0.569\pm0.362\,\mathrm{i}$\\
-\bottomrule
-\end{tabular}
-\end{table}
-For roll/pitch, $I_{xx}=0.0082$, $d_x=0.022$,
-$\omega_n=37.191823\,\mathrm{rad/s}$, and $\zeta=0.848944$.
-For $Q=I_2$ in the coordinates of \eqref{eq:err_state},
-\[
- P\approx\begin{bmatrix}
- 10.983120413&0.000361472\\
- 0.000361472&0.007923686
- \end{bmatrix}.
-\]
-\[
- \lambda_{\max}(P)\approx10.983120425,\quad
- \lambda_{\min}(P)\approx0.007923675.
-\]
-Consequently $\alpha\approx0.045524\,\mathrm{s}^{-1}$.
-At $h=0.01\,\mathrm{s}$ the roll/pitch sampled poles are
-$0.654186\pm0.129989\,\mathrm{i}$, of modulus $0.666976<1$.
-
-\begin{remark}
-The decay certificate $\alpha$ is conservative and differs from
-$-\max\operatorname{Re}\lambda(A)=31.573780\,\mathrm{s}^{-1}$.
-For the illustrative choice $Q=I_2$, $\kappa=0.5$,
-$\|PB\|\approx0.967308$ and $\gamma(s)\approx144.053700s$
-in the stated coordinates and units. This numerical example does not
-restrict the general ISS result.
-\end{remark}
-
-\subsubsection{Outer Loop: Kinematic Guidance Map}
-\label{sec:outer_loop}
-
-Write the applied reference map as
-$f_{\mathrm{UHRC}}=\operatorname{sat}_{\pi/6} f_{\mathrm{raw}}$,
-mapping $(\mathbf o_k,\mathbf z_k)\in\mathbb R^{45}\times\mathcal Z$
-to $\mathcal D=[-\pi/6,\pi/6]^2$, where
-$\mathcal Z=\mathbb R^{2\times C\times H}$ is the latent-carry space.
-
-\begin{lemma}[Output Bound]
-\label{lem:bounded}
-For every finite evaluation,
-$f_{\mathrm{UHRC}}(\mathbf o,\mathbf z)\in\mathcal D$.
-\end{lemma}
-\begin{proof}
-Elementwise saturation in the controller/evaluation interface bounds
-the applied reference. The linear action head does not itself impose
-the $\pi/6$ command limit.
-\end{proof}
-
-\begin{lemma}[Local Lipschitz Regularity]
-\label{lem:lipschitz}
-For frozen finite weights, positive normalization scales, and positive
-RMSNorm regularization, $f_{\mathrm{UHRC}}$ is Lipschitz on compact
-observation carry sets.
-\end{lemma}
-\begin{proof}
-For a fixed finite number of recurrent updates, the pre-saturation
-network is locally smooth, with derivatives
-bounded on compact sets. Positive RMSNorm regularization prevents a
-zero denominator, including at zero latent input. Its Lipschitz bound
-is at most $1/\sqrt{\epsilon}$ for the unweighted RMSNorm used here.
-Their composition is therefore locally Lipschitz.
-Attention, gated products, and residual maps must be included in any
-numerical bound.
-\end{proof}
-In the supplied architecture, each newly stored carry token passes
-through RMSNorm and therefore has norm at most $\sqrt H$.
-Finite initialized carry tokens consequently remain in a compact
-token set. This is bounded memory.
-
-\subsubsection{Cascade Interconnection: ISS and UUB}
-\label{sec:cascade}
-
-Use the fixed rate scales
-$\sigma_\phi=\sigma_\theta=37.2\,\mathrm{s}^{-1}$,
-$\sigma_\psi=8.31\,\mathrm{s}^{-1}$ and the interleaved state
-\[
- \chi=(e_\phi,p/\sigma_\phi,e_\theta,q/\sigma_\theta,
-             e_\psi,r/\sigma_\psi)^\top,\qquad
- e_i=\eta_{r,i}-\eta_i.
-\]
-All angles are in radians. Set
-\begin{equation}
-\begin{gathered}
- P_0=\operatorname{diag}(P_{\mathrm{rp}},P_{\mathrm{rp}},P_\psi),\\
- P_{\mathrm{rp}}=\begin{bmatrix}
- 4.11450013&-1.00164618\\-1.00164618&1.70383480
- \end{bmatrix},\\
- P_\psi=\begin{bmatrix}
- 1.26523980&-0.25464857\\-0.25464857&1.24448025
- \end{bmatrix},\\
- 0.99I_6<P_0<4.48I_6.
- \label{eq:common_sampled_certificate}
-\end{gathered}
-\end{equation}
-The displayed terminating decimals define the certificate matrices.
-Use the norms
-\[
- \|x\|_{P_0}=\sqrt{x^\top P_0x},\qquad
- \|A\|_{P_0}=\sup_{x\ne0}\frac{\|Ax\|_{P_0}}{\|x\|_{P_0}}.
-\]
-For every gain choice in \eqref{eq:pid_box}, the scaled nominal map
-$N(K)$ and its within interval held feedback map $L_t(K)$ satisfy
-\begin{equation}
- \|N(K)\|_{P_0}<0.9903,\qquad
- \|L_t(K)\|_{P_0}\le1,\qquad
- \|F_t\|_{P_0}<1.35,\quad0\le t\le h,
- \label{eq:common_contraction}
-\end{equation}
-where $F_t$ is the open, damped nominal flow.
-
-For completeness, these uniform bounds reduce to finite matrix tests.
-On axis $i$, define $d_i/J_i=\delta_i$ and
-$f_i(t)=(1-e^{-\delta_i t})/\delta_i$. Then
-\[
-\begin{gathered}
- F_i(t)=\begin{bmatrix}1&-\sigma_i f_i(t)\\0&1-\delta_i f_i(t)\end{bmatrix},\quad
- G_i(t)=\begin{bmatrix}-(t-f_i(t))/d_i\\f_i(t)/(J_i\sigma_i)\end{bmatrix},\\
- L_i(t,K)=F_i(t)+G_i(t)[K_{p,i}\ {-K_{d,i}\sigma_i}],\qquad N_i=L_i(h,K).
-\end{gathered}
-\]
-The pair $(t,f_i(t))$ lies in the triangle with vertices
-$(0,0),(h,f_i(h)),(h,h)$.
-For fixed gains, $L_i$ is affine in this pair and for fixed $(t,f)$,
-it is affine in the gains. Convexity of an induced matrix norm
-therefore reduces \eqref{eq:common_contraction} to gain-box vertices
-and these three time vertices. The open flow uses $0\le f_i(t)\le h$.
-The positive-definiteness tests for the displayed matrices were
-verified with rational interval arithmetic, enclosing
-$e^{-\delta_i h}$ between the nineteenth and twentieth alternating
-Taylor sums. The smallest lower bound on the leading principal minor
-or determinant of $0.9903^2P_i-N_i^\top P_iN_i$ is
-$1.94\times10^{-4}$ at the tested vertices.
-
-\paragraph{Quantified nonlinear residual.}
-The exact Euler transformation is
-\[
  \mathcal T(\phi,\theta)=
  \begin{bmatrix}
- 1&\sin\phi\tan\theta&\cos\phi\tan\theta\\
- 0&\cos\phi&-\sin\phi\\
- 0&\sin\phi/\cos\theta&\cos\phi/\cos\theta
+  1&\sin\phi\tan\theta&\cos\phi\tan\theta\\
+  0&\cos\phi&-\sin\phi\\
+  0&\sin\phi/\cos\theta&\cos\phi/\cos\theta
  \end{bmatrix}.
-\]
-For $|\phi|,|\theta|\le a_\eta\le0.01$, direct entrywise bounds give
-\begin{equation}
- \|\mathcal T-I_3\|_2^2
- \le\tan^2a_\eta+(1+\sec^2a_\eta)
-                   (a_\eta^2+a_\eta^4/4)
- <(1.75a_\eta)^2\quad(a_\eta>0).
- \label{eq:euler_residual_bound}
+ \label{uhrc:eq:kinematics}
 \end{equation}
-For the axisymmetric inertia in Assumption 2,
-\[
- J^{-1}(-\boldsymbol\omega_B\times J\boldsymbol\omega_B)
- =g(-qr,pr,0)^\top,\quad
- g=\frac{0.01428-0.0082}{0.0082},\quad
- \|g(-qr,pr,0)\|_2\le\tfrac g2\|\boldsymbol\omega_B\|_2^2.
-\]
-Let $\mathcal E u=(u_1,0,u_2,0,u_3,0)^\top$ and
-$\mathcal B u=(0,u_1/(J_1\sigma_1),0,u_2/(J_2\sigma_2),
-0,u_3/(J_3\sigma_3))^\top$.
-The matrices in \eqref{eq:common_sampled_certificate} give
-\[
- \|\mathcal E u\|_{P_0}\le2.03\|u\|_2,\quad
- \|\boldsymbol\omega_B\|_2\le30.8\|\chi\|_{P_0},\quad
- |e_\phi|,|e_\theta|\le0.533\|\chi\|_{P_0},\quad
- \|\mathcal B u\|_{P_0}\le9.5\|u\|_2.
-\]
-Since $\max_i\sqrt{(P_i)_{22}}/\sigma_i<0.135$ and
-$0.135(g/2)(30.8)^2<48$, the normalized gyroscopic contribution
-has weighted norm at most $48\|\chi\|_{P_0}^2$. Hence, for held references
-$|\phi_{\mathrm{ref}}|,|\theta_{\mathrm{ref}}|\le\bar r$,
-the complete kinematic and gyroscopic residual obeys
-\begin{equation}
- \|\mathcal R(\chi,\boldsymbol\eta_r)\|_{P_0}
- \le111\bar r\|\chi\|_{P_0}+108\|\chi\|_{P_0}^2,
- \quad\bar r+0.533\|\chi\|_{P_0}\le0.01.
- \label{eq:nonlinear_quantified}
-\end{equation}
-For example, the first coefficient follows from
-$2.03\times30.8\times1.75<111$, and the quadratic coefficient
-from $111\times0.533+48<108$. Thus nonzero references produce
-a quantified linear residual as well as quadratic terms.
 
-\paragraph{Admissible references and invariant enclosure.}
+Here $K_{p,i},K_{d,i}$ denote the components of the gain vectors and
+$J_i,d_i$ the diagonal entries of $J,D$.
 
-Define
+At $t_k=kh$, a reference
+$\eta_{r,k}=(\phi_{r,k},\theta_{r,k},0)^\top$ i s selected and held until
+$t_{k+1}$. On a fixed smooth angle-error branch, the controller computes
 \begin{equation}
-\begin{aligned}
- \mathcal R_{\mathrm{ad}}(\bar r,R)=\{\boldsymbol\eta_r:\;&
- \boldsymbol\eta_r(t)=\boldsymbol\eta_{r,k},\quad kh\le t<(k+1)h,\\
- &\eta_{r,k,3}=0,\quad |\eta_{r,k,1}|,|\eta_{r,k,2}|\le\bar r,\\
- &\|\boldsymbol\eta_{r,k+1}-\boldsymbol\eta_{r,k}\|_2\le R\}.
- \label{eq:admissible_references}
-\end{aligned}
+ e_{i,k}=\eta_{r,i,k}-\eta_i(t_k),\qquad
+ v_{i,k}=K_{p,i}e_{i,k}-K_{d,i}\omega_i(t_k),\qquad
+ \tau_{i,k}=\operatorname{sat}_{[-\bar\tau_i,\bar\tau_i]}(v_{i,k}).
+ \label{uhrc:eq:controller}
 \end{equation}
-Let $w(t)$ be additive physical torque, with
-$\sup_{kh\le t<(k+1)h}\|w(t)\|_2\le W$.
-For sample radius $s$ and a larger intersample radius $S$, set
-\begin{equation}
-\begin{gathered}
- \ell_R=111\bar r+108S,\quad
- d_h=1.35h\ell_R<1,\quad c_w=1.35h(9.5),\\
- a_*=0.9903+\frac{d_h}{1-d_h}<1,\qquad
- b_w=\frac{c_w}{1-d_h}.
- \label{eq:nonlinear_constants}
-\end{gathered}
-\end{equation}
-Sufficient containment and input-budget conditions are
-\begin{equation}
-\begin{gathered}
- \bar r+0.533S\le0.01,\qquad
- \frac{s+c_wW}{1-d_h}<S,\\
- 2.03R+b_wW\le(1-a_*)s,\qquad
- 15s+W<0.6,\quad7.5s+W<0.35.
- \label{eq:invariant_conditions}
-\end{gathered}
-\end{equation}
-Here $15s$ and $7.5s$ bound commanded roll/pitch and yaw torque on
-the sample ellipsoid uniformly over the gain box. They follow from
-$\sqrt{s^2a_i^\top P_i^{-1}a_i}$,
-$a_i=(K_{p,i},-K_{d,i}\sigma_i)^\top$, tested at gain vertices.
+The torque $\tau_{i,k}$ is held on $[t_k,t_{k+1})$. This is measured-rate
+damping; no derivative-of-reference feedforward is included. The attitude
+integral state is zero and all attitude integral gains remain zero.
 
-\begin{theorem}[Local Sampled Cascade ISS and UUB]
-\label{thm:cascade_iss}
-For the physical rotational model in Assumption 2, gains in
-$\mathcal K_{\mathrm{box}}$, references in
-$\mathcal R_{\mathrm{ad}}(\bar r,R)$, and bounded torque $w$, suppose
-\eqref{eq:invariant_conditions} holds and $\|\chi_0\|_{P_0}\le s$.
-Then the reference-dependent sample enclosure
+\begin{enumerate}[
+    label={Assumption \arabic*:},
+    widest=4,
+    leftmargin=*
+]
+\item[Assumption 1:]
+The operating domain has $|\phi|,|\theta|\le\pi/6$, a fixed smooth
+angle-error branch, and torque limits
+$(0.6,0.6,0.35)\,\mathrm{Nm}$. The certificate uses ideal applied
+body torques. Torque commands are clipped componentwise to these
+limits and held on each sampling interval, h.
+
+\item[Assumption 2:]
+The physical rotational model is
 \[
- \Omega_s=\{(\boldsymbol\eta,\boldsymbol\omega_B,
-                  \boldsymbol\eta_r):\|\chi\|_{P_0}\le s,
- |\eta_{r,1}|,|\eta_{r,2}|\le\bar r,\ \eta_{r,3}=0\}
+ J\dot{\omega}_B
+ =\tau-D\omega_B-\omega_B\times(J\omega_B)+w(t),
+ \qquad
+ \dot{\eta}=\mathcal T(\eta)\omega_B,
 \]
-is invariant at control updates, its intersample tube satisfies
-$\|\chi(t;\boldsymbol\eta_{r,k})\|_{P_0}<S$, and torque saturation
-is inactive. Moreover,
+where $D$ is the rotational damping matrix. 
+The external torque $w$ is measurable and satisfies
+\[
+ \operatorname*{ess\,sup}_{t\ge0}\lVert w(t)\rVert_2\le W.
+\]
+The undisturbed model is recovered by taking $w=0$.
+
+\item[Assumption 3:]
+Applied references are selected at $t_k=kh$ and held between updates,
+with $\eta_{r,k}=(\phi_{\mathrm{ref},k},\theta_{\mathrm{ref},k},0)^\top$.
+They satisfy
+\[
+ |\phi_{\mathrm{ref},k}|,|\theta_{\mathrm{ref},k}|
+ \le\bar r\le\pi/6,
+ \qquad
+ \lVert\eta_{r,k+1}-\eta_{r,k}\rVert_2\le R.
+\]
+
+
+\item[Assumption 4:]
+Actual thrust satisfies $0\le T(t)\le T_{\max}$.
+\end{enumerate}
+
+\subsubsection{Inner-Loop Dynamics}
+\label{sec:inner_loop}
+\label{uhrc:sec:sampled}
+
+Use the scaled tracking state
 \begin{equation}
- \|\chi_{k+1}\|_{P_0}\le a_*\|\chi_k\|_{P_0}
- +2.03\|\delta\boldsymbol\eta_{r,k}\|_2+b_wW,
- \label{eq:full_decrease}
+ \chi=(e_\phi,p/\sigma_\phi,e_\theta,q/\sigma_\theta,
+                 e_\psi,r/\sigma_\psi)^\top,\qquad
+ \sigma=(37.2,37.2,8.31).
+ \label{uhrc:eq:scaled-state}
 \end{equation}
-and consequently
-\begin{equation}
- \|\chi_k\|_2\le
- \sqrt{4.48/0.99}\,a_*^k\|\chi_0\|_2+
- \frac{2.03R+b_wW}{\sqrt{0.99}(1-a_*)}.
- \label{eq:nonlinear_iss_estimate}
-\end{equation}
-This establishes local ISS of rotational tracking, with invariant
-local-domain containment, and UUB for the stated admissible inputs.
-\end{theorem}
+Let $\chi_k=\chi(t_k^+)$ denote the state after selecting $\eta_{r,k}$.
+Writing
+$T_{r,k}=\mathcal T(\phi_{r,k},\theta_{r,k})$ and
+$\delta\eta_{r,k}=\eta_{r,k+1}-\eta_{r,k}$.
+
+\begin{lemma}[Regional representation]
+\label{uhrc:lem:sector}
+If $|v_{i,k}|\le2\bar\tau_i$, there exists
+$\lambda_{i,k}\in[1/2,1]$ such that
+$\tau_{i,k}=\lambda_{i,k}v_{i,k}$.
+\end{lemma}
 \begin{proof}
-Over a held-reference interval, variation of constants gives
-\[
- \chi(t)=L_t(K)\chi_k+
- \int_0^t F_{t-u}[\mathcal R(\chi(u),\boldsymbol\eta_{r,k})
-                              +\mathcal B w(u)]\,du.
-\]
-Up to a first exit from $\|\chi\|_{P_0}<S$,
-\eqref{eq:nonlinear_quantified} bounds the residual by
-$\ell_R\|\chi\|_{P_0}$.
-For $Y=\sup_{0\le t\le h}\|\chi(t)\|_{P_0}$,
-\[
- Y\le\|\chi_k\|_{P_0}+d_hY+c_wW,
- \qquad Y\le\frac{\|\chi_k\|_{P_0}+c_wW}{1-d_h}<S.
-\]
-The strict tube inequality prevents a first exit; the angle bounds
-and held-torque limits prevent exit from the valid model domain.
-At $h$, the stronger nominal contraction in
-\eqref{eq:common_contraction}, followed by the reference jump
-$\mathcal E\delta\boldsymbol\eta_{r,k}$, yields
-\eqref{eq:full_decrease}. The input budget gives
-$\|\chi_{k+1}\|_{P_0}\le a_*s+2.03R+b_wW\le s$.
-Induction proves sample invariance and tube validity; geometric-series
-comparison and norm equivalence prove \eqref{eq:nonlinear_iss_estimate}.
+For $|v_{i,k}|\le\bar\tau_i$, choose $\lambda_{i,k}=1$.
+Otherwise choose $\lambda_{i,k}=\bar\tau_i/|v_{i,k}|$.
+The assumed requested-torque bound places this ratio in $[1/2,1]$.
+The multiplier is fixed throughout the hold interval.
 \end{proof}
 
-\paragraph{Parametric representation of the certificate.}
-Using the preceding verified constants at $h=0.01\,\mathrm{s}$,
-represent the admissible region and input choices by
+Define $C\in\mathbb R^{3\times6}$ by
+$C_{i,2i-1}=K_{p,i}$ and $C_{i,2i}=-K_{d,i}\sigma_i$, with other entries zero.
+Then $v_k=C\chi_k$ and
+$\Lambda_k=\operatorname{diag}(\lambda_{1,k},\lambda_{2,k},\lambda_{3,k})$.
+For $0\le t\le h$, let
 \begin{equation}
- \mathcal A=\left\{(\bar r,s,S,R,W):
- \bar r,R,W\ge0,\quad0<s<S,\quad
- \text{\eqref{eq:nonlinear_constants} and
-       \eqref{eq:invariant_conditions} hold}\right\}.
- \label{eq:admissible_certificate_family}
+ b_i(t)=e^{-d_it/J_i},\qquad
+ f_i(t)=\frac{1-b_i(t)}{d_i/J_i},\qquad
+ g_{1,i}(t)=\frac{t-f_i(t)}{d_i},\qquad
+ g_{2,i}(t)=\frac{f_i(t)}{J_i}.
+ \label{uhrc:eq:scalar-flow}
 \end{equation}
-No particular radius, reference increment, or disturbance bound is
-prescribed. Each member of $\mathcal A$ defines an invariant enclosure
-$\Omega_s$, an intersample tube of radius $S$, and the reference set
-$\mathcal R_{\mathrm{ad}}(\bar r,R)$.
-The set is nonempty, with $\bar r=R=W=0$, choose $S>0$
-sufficiently small for contraction and angle containment, then choose
-$0<s<(1-d_h)S$ satisfying the torque limits. The strict margins
-also admit sufficiently small positive reference and disturbance bounds.
+For each interval, $F_{t,k},G_{t,k}$ are defined by their nonzero entries:
+\begin{align}
+ (F_{t,k})_{2i-1,2j-1}&=\delta_{ij},&
+ (F_{t,k})_{2i-1,2j}&=-(T_{r,k})_{ij}\sigma_jf_j(t),\nonumber\\
+ (F_{t,k})_{2i,2j}&=\delta_{ij}b_i(t),&
+ (G_{t,k})_{2i-1,j}&=-(T_{r,k})_{ij}g_{1,j}(t),\nonumber\\
+ (G_{t,k})_{2i,j}&=\delta_{ij}\frac{g_{2,i}(t)}{\sigma_i}.&&
+ \label{uhrc:eq:maps}
+\end{align}
+Set $L_{t,k}=F_{t,k}+G_{t,k}\Lambda_kC$ and $N_k=L_{h,k}$.
+The fixed injection maps are
+\begin{align}
+ \mathcal Eu&=(u_1,0,u_2,0,u_3,0)^\top,\nonumber\\
+ \mathcal Bu&=(0,u_1/(J_1\sigma_1),0,u_2/(J_2\sigma_2),
+                         0,u_3/(J_3\sigma_3))^\top.
+ \label{uhrc:eq:injections}
+\end{align}
+and define the exact nonlinear remainder as
+\begin{equation}
+ \mathcal R(\chi,\eta_{r,k})
+ =-\mathcal E[(\mathcal T(\eta)-T_{r,k})\omega_B]
+  +\mathcal B[-\omega_B\times(J\omega_B)].
+ \label{uhrc:eq:remainder}
+\end{equation}
+For $0\le t<h$, variation of constants gives
+\begin{equation}
+ \chi(t_k+t)=L_{t,k}\chi_k+
+ \int_0^t F_{t-v,k}
+ \left[\mathcal R(\chi(t_k+v),\eta_{r,k})+
+                    \mathcal Bw(t_k+v)\right]\,dv.
+ \label{uhrc:eq:flow}
+\end{equation}
+At the endpoint, Taking the left limit and then applying the reference jump:
+\begin{align}
+ \chi_{k+1}^{-}
+ &=N_k\chi_k+
+ \int_0^h F_{h-v,k}
+ \left[\mathcal R(\chi(t_k+v),\eta_{r,k})+
+                    \mathcal Bw(t_k+v)\right]\,dv,\nonumber\\
+ \chi_{k+1}&=\chi_{k+1}^{-}+\mathcal E\delta\eta_{r,k}.
+ \label{uhrc:eq:jump}
+\end{align}
+Thus reference increments enter directly, without differentiating a
+discontinuous held reference.
 
-The nonlinear contraction condition has the equivalent representation
+\subsubsection{Common Quadratic Certificate and Finite Verification}
+\label{uhrc:sec:common}
+
+Take $P=\operatorname{diag}(P_\phi,P_\theta,P_\psi)$, with all displayed decimals
+interpreted exactly, where
+\begin{align}
+ P_\phi&=\begin{bmatrix}
+ 1.9473235487&-2.1836575679\\-2.1836575679&6.0335073972
+ \end{bmatrix},\nonumber\\
+ P_\theta&=\begin{bmatrix}
+ 8.7782076491&-2.5300374186\\-2.5300374186&13.9909634365
+ \end{bmatrix},\nonumber\\
+ P_\psi&=\begin{bmatrix}
+ 1.2679581274&-1.9194171927\\-1.9194171927&14.7490226386
+ \end{bmatrix}.
+ \label{eq:common_sampled_certificate}
+\end{align}
+Define $z=\left\lVert \chi\right\rVert_{P}=\sqrt{\chi^\top P\chi}$ and the induced matrix norm
+$\|A\|_P=\|P^{1/2}AP^{-1/2}\|_2$.
+
+\begin{proposition}[Numerical map certificate]
+\label{uhrc:prop:common}
+The matrix in \eqref{eq:common_sampled_certificate} satisfies
+$0.999I_6\prec P\prec15.018I_6$. For all
+$|\phi_{r,k}|,|\theta_{r,k}|\le\pi/6$,
+$\lambda_{i,k}\in[1/2,1]$, and $t\in[0,h]$,
 \begin{equation}
-\begin{aligned}
- a_*<1
- &\quad\Longleftrightarrow\quad
- d_h<\frac{1-0.9903}{2-0.9903},\qquad 0\le d_h<1,\\
- &\quad\Longleftrightarrow\quad
- 111\bar r+108S<
- \frac{1-0.9903}{1.35h(2-0.9903)}.
- \label{eq:parametric_contraction_condition}
-\end{aligned}
+ \|N_k\|_P<\rho=0.9951,\qquad
+ \|L_{t,k}\|_P<c_L=1.048,\qquad
+ \|F_{t,k}\|_P<c_F=1.152.
+ \label{eq:common_contraction}
 \end{equation}
-Thus the available contraction margin determines the admissible
-nonlinear region. For each admissible $(\bar r,s,S,W)$, the reference
-increment budget is
+\end{proposition}
+\begin{proof}
+The numerical matrix inequalities are verified by directed interval
+arithmetic, using the exact displayed decimal coefficients. Partition each
+reference angle over $[-0.524,0.524]$ at $-0.262,0,0.262$.
+The results cover $[-\pi/6,\pi/6]^2$. Establishing
 \begin{equation}
- 0\le R\le R_{\max}(\bar r,s,S,W)
- :=\frac{(1-a_*)s-b_wW}{2.03},\qquad
+ \rho^2P-N_k^\top PN_k\succ0.
+ \label{uhrc:eq:vertex-LMI}
+\end{equation}
+Interval $LDL^\top$ factorization gives a strictly positive lower bound for
+each pivot; the smallest verified sampled pivot lower bound exceeds
+$0.01445$. The triangle inequality for the common induced norm extends
+\eqref{uhrc:eq:vertex-LMI} to each full box. 
+
+For intersample coverage, 
+$1.149^2P-F_{h,k}^\top PF_{h,k}\succ0$.
+Since $f_i''(t)=-(d_i/J_i)e^{-d_it/J_i}$, the chord interpolation defect obeys
+\begin{equation}
+ \epsilon_i(t)=f_i(t)-\frac th f_i(h),\qquad
+ 0\le\epsilon_i(t)\le\frac{d_i h^2}{8J_i}.
+ \label{uhrc:eq:interpolation}
+\end{equation}
+There are rank-one matrices $B_{i,k}$ such that
+\begin{equation}
+ L_{t,k}=\left(1-\frac th\right)I_6+\frac thN_k+
+                 \sum_{i=1}^3\epsilon_i(t)B_{i,k}.
+ \label{uhrc:eq:interpolation-map}
+\end{equation}
+In grouped coordinates $(e^\top,(\omega_B/\sigma)^\top)^\top$, their factors are
+\begin{equation}
+ B_{i,k}=\mathbf u_{i,k}\mathbf v_{i,k}^{\top},\quad
+ \mathbf u_{i,k}=\begin{bmatrix}T_{r,k}[:,i]/d_i\\\mathbf e_i/(J_i\sigma_i)\end{bmatrix},\quad
+ \mathbf v_{i,k}^{\top}=\begin{bmatrix}
+ \lambda_{i,k}K_{p,i}\mathbf e_i^\top&
+ -\bigl(\lambda_{i,k}K_{d,i}+d_i\bigr)\sigma_i\mathbf e_i^\top
+ \end{bmatrix}.
+ \label{uhrc:eq:rank-one}
+\end{equation}
+Here $\mathbf e_i$ is a coordinate basis vector. The metric is permuted
+consistently when using these grouped coordinates. Verified bounds on the
+primal and dual factor norms are respectively
+$(58.64,133.65,92.00)$ and $(8.84,5.83,2.114)$.
+Because $\|uv^\top\|_P=\sqrt{u^\top Pu}\sqrt{v^\top P^{-1}v}$,
+their summed contribution in \eqref{uhrc:eq:interpolation-map} is less than
+$0.047262$. Consequently $\|L_{t,k}\|_P<1.047262<1.048$.
+The analogous open-flow interpolation defect is below $0.001955$, giving
+$\|F_{t,k}\|_P<1.149+0.001955<1.152$.
+These estimates cover the entire hold interval.
+\end{proof}
+
+\begin{remark}
+The same $P$ applies to reference and saturation variation within the stated
+family.
+\end{remark}
+
+\subsubsection{Nonlinear Remainder and Physical-State Bounds}
+\label{uhrc:sec:residual}
+
+For the axis block $\chi_i=(e_i,\omega_i/\sigma_i)^\top$, put
+$z_i=\sqrt{\chi_i^\top P_i\chi_i}$, so that
+$z^2=z_\phi^2+z_\theta^2+z_\psi^2$.
+The inequality
+\begin{equation}
+ |a^\top x|\le\sqrt{a^\top P^{-1}a}\,\left\lVert x\right\rVert_{P}
+ \label{uhrc:eq:dual}
+\end{equation}
+and direct block inversion give the following conservative coefficients:
+\begin{center}
+\begin{tabular}{lrrr}
+\toprule
+Bound & Roll & Pitch & Yaw\\
+\midrule
+$|e_i|\le a_i z_i$ & $a_\phi=0.930$ & $a_\theta=0.347$ & $a_\psi=0.992$\\
+$|\omega_i|\le \beta_i z_i$ & $\beta_\phi=19.65$ & $\beta_\theta=10.22$ & $\beta_\psi=2.415$\\
+$|C_i\chi|\le t_i z$ & $t_\phi=8.68$ & $t_\theta=5.66$ & $t_\psi=2.066$\\
+\bottomrule
+\end{tabular}
+\end{center}
+The injection-map bounds are
+\begin{equation}
+ \left\lVert \mathcal E\delta\eta_r\right\rVert_{P}\le c_E\left\lVert \delta\eta_r\right\rVert_{2},
+ \quad c_E=2.963\quad(\delta\eta_{r,3}=0),\qquad
+ \left\lVert \mathcal Bw\right\rVert_{P}\le c_B\left\lVert w\right\rVert_{2},\quad c_B=32.37.
+ \label{uhrc:eq:injection-bounds}
+\end{equation}
+
+\begin{lemma}[Remainder bound]
+\label{uhrc:lem:remainder}
+If actual and reference roll and pitch lie in $[-\pi/6,\pi/6]$, then
+\begin{equation}
+ \left\lVert \mathcal R(\chi,\eta_r)\right\rVert_{P}
+ \le C_R\left\lVert \chi\right\rVert_{P}^2,\qquad C_R=25.
+ \label{eq:nonlinear_quantified}
+\end{equation}
+\end{lemma}
+\begin{proof}
+Let $P_E=\operatorname{diag}(P_{11},P_{33},P_{55})$ and split
+$\mathcal R=\mathcal R_{\mathrm{kin}}+\mathcal R_{\mathrm{gyro}}$
+according to \eqref{uhrc:eq:remainder}. The first column of either angle
+derivative of $\mathcal T$ is zero. Bounding the spectral norm by the
+Frobenius norm gives
+\begin{align}
+ \left\lVert P_E^{1/2}(\partial_\phi\mathcal T)[:,2{:}3]\right\rVert_{2}^2
+ &\le P_{11}/3+P_{33}+4P_{55}/3<3.335^2,\nonumber\\
+ \left\lVert P_E^{1/2}(\partial_\theta\mathcal T)[:,2{:}3]\right\rVert_{2}^2
+ &\le16P_{11}/9+4P_{55}/9<2.007^2.
+ \label{uhrc:eq:T-derivatives}
+\end{align}
+These estimates use $\tan^2\theta\le1/3$ and $\sec^2\theta\le4/3$.
+The line segment joining actual and reference angles remains in the angle
+box. The mean-value formula therefore yields
+\begin{align}
+ \left\lVert \mathcal R_{\mathrm{kin}}\right\rVert_{P}
+ &\le(3.335|e_\phi|+2.007|e_\theta|)\sqrt{q^2+r^2}\nonumber\\
+ &\le\left[\frac{3.335(0.930)(10.22)}2+
+                 2.007(0.347)(10.22)\right]z^2
+ =22.96642488z^2.
+ \label{uhrc:eq:kinematic-bound}
+\end{align}
+Here $z_\phi\sqrt{z_\theta^2+z_\psi^2}\le z^2/2$, while
+$z_\theta\sqrt{z_\theta^2+z_\psi^2}\le z^2$.
+
+Axisymmetric inertia gives
+\begin{equation}
+ J^{-1}[-\omega_B\times(J\omega_B)]
+ =\gamma_J(-qr,pr,0)^\top,\qquad
+ \gamma_J=\frac{0.01428-0.0082}{0.0082}.
+ \label{uhrc:eq:gyro}
+\end{equation}
+Since $\sqrt{P_{22}}/37.2<0.06604$ and
+$\sqrt{P_{44}}/37.2<0.10056$, the rate bounds and
+$z_\psi\sqrt{z_\phi^2+z_\theta^2}\le z^2/2$ imply
+\begin{equation}
+ \left\lVert \mathcal R_{\mathrm{gyro}}\right\rVert_{P}
+ \le\frac{\gamma_J(2.415)}2
+ \max\{0.06604(10.22),0.10056(19.65)\}z^2.
+ \label{uhrc:eq:gyro-bound}
+\end{equation}
+The sum of the two coefficients is less than $24.735575<25$.
+The triangle inequality proves \eqref{eq:nonlinear_quantified}.
+\end{proof}
+
+\begin{remark}
+The remainder bound is conditional on the stated angle domain. Its
+coefficient depends on the metric and scaling.
+\end{remark}
+
+\subsubsection{Neural Reference Map: Boundedness and Regularity}
+\label{sec:outer_loop}
+
+Let $\mathbf o_k\in\mathbb R^{n_o}$ denote the observation, with $n_o$
+equal to the deployed model's configured observation dimension, and let
+$m_k\in\mathcal Z=\mathbb R^{2\times C_{\mathrm{mem}}\times H}$ denote its stored carry.
+Here $C_{\mathrm{mem}}$ is the carry length and $H$ is the hidden dimension. The feedback matrix $C$ retains its definition above.
+The applied roll/pitch reference map is
+\begin{equation}
+ f_{\mathrm{UHRC}}(\mathbf o_k,m_k)
+ =\operatorname{sat}_{[-\pi/6,\pi/6]^2}
+       \bigl(f_{\mathrm{raw}}(\mathbf o_k,m_k)\bigr),
+ \qquad
+ \eta_{r,k}=
+ \begin{bmatrix}f_{\mathrm{UHRC}}(\mathbf o_k,m_k)\\0\end{bmatrix}.
+ \label{uhrc:eq:neural-map}
+\end{equation}
+
+\begin{lemma}[Output bound]
+\label{lem:bounded}
+For every finite evaluation,
+$f_{\mathrm{UHRC}}(\mathbf o,m)\in[-\pi/6,\pi/6]^2$.
+\end{lemma}
+\begin{proof}
+Componentwise saturation bounds the applied reference.
+\end{proof}
+
+\begin{lemma}[Local Lipschitz regularity]
+\label{lem:lipschitz}
+For fixed finite weights, frozen observation normalization with positive
+scales, positive RMSNorm regularization, and a fixed finite number of
+reasoning updates, $f_{\mathrm{UHRC}}$ is Lipschitz on compact convex
+observation--carry sets.
+\end{lemma}
+\begin{proof}
+The affine maps, attention, smooth gates, and regularized normalization
+in the finite inference computation are smooth, with bounded derivatives
+on each such set and on its intermediate images. Saturation is
+nonexpansive in the Euclidean norm, composition gives a finite local
+Lipschitz constant. For the unweighted normalization
+\[
+ \operatorname{RMSNorm}(x)
+ =\frac{x}{\sqrt{\left\lVert x\right\rVert_{2}^2/H+\epsilon}},\qquad \epsilon>0,
+\]
+the Jacobian has spectral norm at most $1/\sqrt\epsilon$.
+A quantitative constant for the complete policy must also account for
+observation normalization, attention, residual additions, products, and
+the repeated reasoning steps.
+\end{proof}
+
+In the implemented architecture, each newly stored carry token is an
+output of unweighted RMSNorm and therefore has Euclidean norm at most
+$\sqrt H$ in exact arithmetic. Finite initialized tokens are either
+retained or replaced by such tokens, so the stored carry remains in a
+bounded finite-dimensional set. 
+
+The interconnection theorem additionally requires the applied reference
+sequence to satisfy the stated amplitude and increment constraints.
+
+\subsubsection{Coupled Attitude Tracking: Regional ISS and Invariance}
+\label{sec:cascade}
+\paragraph{Admissible references and convex tracking-state regions.}
+\label{uhrc:sec:admissibility}
+
+Choose $0<s<S$, $0\le\bar r<\pi/6$, and $R,W\ge0$. Let the reference and
+disturbance family satisfy
+\begin{align}
+ |\phi_{r,k}|,|\theta_{r,k}|&\le\bar r,&\psi_{r,k}&=0,\nonumber\\
+ \left\lVert \delta\eta_{r,k}\right\rVert_{2}&\le R,&
+ \operatorname*{ess\,sup}_{t_k\le t<t_{k+1}}\left\lVert w(t)\right\rVert_{2}&\le W.
+ \label{eq:admissible_references}
+\end{align}
+Define
+\begin{equation}
+ \Omega_s=\{\chi:\chi^\top P\chi\le s^2\},\qquad
+ \Omega_S=\{\chi:\chi^\top P\chi\le S^2\}.
+ \label{uhrc:eq:ellipsoids}
+\end{equation}
+Both are convex ellipsoids because $P\succ0$. For example, for
+$\chi_1,\chi_2\in\Omega_s$ and $0\le\alpha\le1$,
+\[
+ \left\lVert \alpha\chi_1+(1-\alpha)\chi_2\right\rVert_{P}
+ \le\alpha\left\lVert \chi_1\right\rVert_{P}+(1-\alpha)\left\lVert \chi_2\right\rVert_{P}\le s.
+\]
+Invariance additionally requires the following inequalities.
+
+Put
+\begin{equation}
+ d_h=c_FhC_RS,\qquad c_w=c_Fhc_B,\qquad
+ a_* =\rho+\frac{c_Ld_h}{1-d_h},\qquad
+ b_w=\frac{c_w}{1-d_h}.
+ \label{eq:nonlinear_constants}
+\end{equation}
+Define the admissible parameter family $\mathcal A$ by
+\begin{align}
+ &0<s<S,\quad 0\le\bar r<\pi/6,\quad R,W\ge0,
+       \quad d_h<1,\quad a_*<1,\label{uhrc:eq:admissible-a}\\
+ &\bar r+0.930S\le\pi/6,
+       \qquad \frac{c_Ls+c_wW}{1-d_h}<S,\label{uhrc:eq:admissible-b}\\
+ &c_ER+b_wW\le(1-a_*)s,\label{uhrc:eq:admissible-c}\\
+ &8.68s\le1.2,\qquad5.66s\le1.2,\qquad2.066s\le0.7.
+ \label{uhrc:eq:admissible-d}
+\end{align}
+The final line constrains requested torques at ticks to the regional sector.
+The actual torques remain clipped at $(0.6,0.6,0.35)$ Nm.
+No convexity claim is made for the nonlinear parameter-feasibility set
+$\mathcal A$.
+
+\paragraph{Coupled regional ISS theorem.}
+\label{uhrc:sec:ISS}
+
+\begin{theorem}[Sampled invariance, intersample containment, and regional ISS]
+\label{thm:cascade_iss}
+Consider \eqref{uhrc:eq:plant}--\eqref{uhrc:eq:controller} under the standing
+assumptions, with a tuple $(\bar r,s,S,R,W)\in\mathcal A$ and inputs satisfying
+\eqref{eq:admissible_references}. If $\chi_0\in\Omega_s$, then
+$\chi_k\in\Omega_s$ for every $k\ge0$, and
+$\left\lVert \chi(t)\right\rVert_{P}<S$ between updates. Actual roll and pitch remain in
+$[-\pi/6,\pi/6]$. Moreover, with $z_k=\left\lVert \chi_k\right\rVert_{P}$,
+\begin{equation}
+ z_k\le a_*^kz_0+
+ \frac{1-a_*^k}{1-a_*}(c_ER+b_wW).
+ \label{uhrc:eq:ISS}
+\end{equation}
+\end{theorem}
+\begin{proof}
+Suppose $z_k\le s$. The component bounds and
+\eqref{uhrc:eq:admissible-d} place the held torque in the sector of
+Lemma~\ref{uhrc:lem:sector}. Consider a hypothetical first exit from the
+$S$-tube during this interval. Up to that time, the actual angle bounds
+follow from $|\phi|,|\theta|\le\bar r+0.930S\le\pi/6$, so
+Lemma~\ref{uhrc:lem:remainder} applies.
+For the largest weighted radius $Y$ up to that time,
+\eqref{uhrc:eq:flow} gives
+\begin{equation}
+ Y\le c_Lz_k+c_FhC_RS\,Y+c_Fhc_BW
+   =c_Lz_k+d_hY+c_wW.
+ \label{uhrc:eq:intersample-comparison}
+\end{equation}
+Since $d_h<1$,
+\[
+ Y\le\frac{c_Lz_k+c_wW}{1-d_h}
+ \le\frac{c_Ls+c_wW}{1-d_h}<S,
+\]
+contradicting the first exit. Existence extends across the interval because
+the state remains in a compact region away from the Euler singularity and
+the disturbance is essentially bounded.
+
+At the next tick, \eqref{uhrc:eq:jump} and the bounds on $N_k$ and
+$\mathcal E$ yield
+\begin{align}
+ z_{k+1}
+ &\le\rho z_k+d_hY+c_wW+c_E\left\lVert \delta\eta_{r,k}\right\rVert_{2}\nonumber\\
+ &\le a_*z_k+b_wW+c_ER
+ \le a_*s+(1-a_*)s=s.
+ \label{eq:full_decrease}
+\end{align}
+Induction establishes sampled invariance and intersample containment for
+all intervals. Iterating \eqref{eq:full_decrease} and summing a geometric
+series proves \eqref{uhrc:eq:ISS}. Finally,
+$|\phi|\le|\phi_r|+|e_\phi|$ and
+$|\theta|\le|\theta_r|+|e_\theta|$ establish actual-angle containment.
+\end{proof}
+
+\begin{corollary}[Ultimate bound and zero-input convergence]
+\label{uhrc:cor:ultimate}
+Under Theorem~\ref{thm:cascade_iss},
+\begin{equation}
+ \limsup_{k\to\infty}\left\lVert \chi_k\right\rVert_{P}
+ \le\frac{c_ER+b_wW}{1-a_*}.
+ \label{uhrc:eq:ultimate}
+\end{equation}
+Let $p_-=\lambda_{\min}(P)$ and $p_+=\lambda_{\max}(P)$. Then
+\begin{equation}
+ \left\lVert \chi_k\right\rVert_{2}
+ \le\sqrt{\frac{p_+}{p_-}}a_*^k\left\lVert \chi_0\right\rVert_{2}
+ +\frac{1-a_*^k}{(1-a_*)\sqrt{p_-}}(c_ER+b_wW).
+ \label{eq:nonlinear_iss_estimate}
+\end{equation}
+For a constant admissible reference and $w=0$, the tracking state converges
+exponentially at samples and between samples. Persistent nonzero admissible
+inputs generally imply an ultimate neighborhood rather than convergence
+exactly to the origin.
+\end{corollary}
+\begin{proof}
+Since $0<a_*<1$, its powers tend to zero, proving
+\eqref{uhrc:eq:ultimate}. Norm equivalence gives
+\eqref{eq:nonlinear_iss_estimate}. When $R=W=0$,
+$z_k\le a_*^kz_0$ and
+$\left\lVert \chi(t_k+t)\right\rVert_{P}\le c_La_*^kz_0/(1-d_h)$ for $0\le t<h$.
+Writing $\alpha_*=-\log(a_*)/h>0$ gives a continuous-time exponential
+bound with a finite prefactor, because
+$a_*^{\lfloor t/h\rfloor}\le a_*^{-1}e^{-\alpha_*t}$.
+\end{proof}
+\paragraph{Parametric budgets.}
+For each $(\bar r,s,S,W)$ satisfying the remaining conditions, the allowed
+reference increment is
+\begin{equation}
+ 0\le R\le R_{\max}(s,S,W)
+ :=\frac{(1-a_*)s-b_wW}{c_E},\qquad
  b_wW\le(1-a_*)s.
  \label{eq:parametric_reference_budget}
 \end{equation}
-The disturbance bound must also satisfy the intersample and actuator
-conditions, equivalently
+The intersample condition additionally requires
 \begin{equation}
- 0\le W<\min\left\{
- \frac{(1-d_h)S-s}{c_w},\quad0.6-15s,\quad0.35-7.5s
- \right\}.
+ 0\le W<\frac{(1-d_h)S-c_Ls}{c_w}.
  \label{eq:parametric_disturbance_budget}
 \end{equation}
-Together with $\bar r+0.533S\le0.01$, these inequalities specify
-the permissible choices rather than assigning unsupported numerical
-operating limits. Initialization requires $\|\chi_0\|_{P_0}\le s$.
+Thus region size, disturbance allowance, and reference increments cannot
+be chosen independently. The torque-sector conditions constrain the
+controller's requested torque. $w$ is a separate external torque in the
+plant equation and is accounted for in the tube and input budgets.
 
-The corresponding physical bounds are
+The component bounds give the physical estimates
 \begin{equation}
-\begin{aligned}
- |\phi(t)|,|\theta(t)|&\le\bar r+0.533S,\\
- \|\boldsymbol\omega_B(t)\|_2&\le30.8S,\\
- |\tau_{\phi,k}|,|\tau_{\theta,k}|&\le15s,
- \qquad|\tau_{\psi,k}|\le7.5s,\\
- \limsup_{k\to\infty}\|\chi_k\|_{P_0}
- &\le\frac{2.03R+b_wW}{1-a_*}\le s.
+ \begin{aligned}
+  |\phi(t)|&\le\bar r+0.930S,&
+  |\theta(t)|&\le\bar r+0.347S,\\
+  \left\lVert \omega_B(t)\right\rVert_{2}&\le19.65S,&
+  |\tau_{i,k}|&\le\min\{\bar\tau_i,t_i s\},
+ \end{aligned}
  \label{eq:parametric_physical_bounds}
-\end{aligned}
 \end{equation}
-Here the torque bounds apply to commanded torques; the additive
-torque allowance $W$ is included in
-\eqref{eq:parametric_disturbance_budget}.
-For zero reference increments and zero external torque, the tracking
-origin is locally exponentially stable; bounded admissible inputs
-give the ultimate error neighbourhood in \eqref{eq:nonlinear_iss_estimate}.
-Attitude and rate bounds are recovered from $\eta_i=\eta_{r,i}-e_i$
-and $\omega_i=\sigma_i\chi_{2i}$, not by feeding angle units into a
-torque-input ISS gain.
+where $(t_\phi,t_\theta,t_\psi)=(8.68,5.66,2.066)$.
+The rate estimate follows from
+$\left\lVert \omega_B\right\rVert_{2}^2\le\max_i\beta_i^2\sum_i z_i^2$.
 
-\begin{remark}[Scope of the nonlinear certificate]
-The family $\mathcal A$ certifies local invariant enclosures near hover,
-not the full $30^\circ$ operating domain.
-Each choice must satisfy
-\eqref{eq:nonlinear_constants}--\eqref{eq:invariant_conditions}
-The current $30^\circ$ clipping interface alone does not enforce
-\eqref{eq:admissible_references}. An all-time UHRC interconnection
-claim therefore requires an implemented admissibility mechanism or
-an independent guarantee that its applied references belong to that set.
-The altitude PID and navigational position dynamics require separate
-stability arguments.
+\paragraph{Numerical specialization.}
+One admissible tuple is
+\[
+ \bar r=29.5^\circ,\qquad s=0.0075,\qquad S=0.0083,
+ \qquad R=6\times10^{-6}\ \mathrm{rad/update},\qquad W=0.
+\]
+It gives $d_h=0.0023904$, $a_*<0.997611142$, and
+$Y<0.007878834<S$. Using that conservative rounded bound on $a_*$,
+\[
+ c_ER=0.000017778<0.000017916435\le(1-a_*)s.
+\]
+The actual-angle bound is
+$|\phi|,|\theta|<29.94227^\circ$, and requested torques are bounded by
+$(0.06510,0.04245,0.015495)$ Nm. The increment-equivalent rate is
+$R/h\approx0.0343775^\circ/\mathrm{s}$.
+
+\begin{remark}[Scope of the coupled certificate]
+For the constants above, $a_*<1$ itself requires
+\begin{equation}
+ S<\frac{1-\rho}{c_FhC_R(c_L+1-\rho)}
+ <0.01616.
+ \label{uhrc:eq:coupled-size-ceiling}
+\end{equation}
+Because $s<S$, every feasible coupled tube obtained from these inequalities
+has requested torques below
+$(0.14027,0.09147,0.03339)$ Nm, strictly below the saturation limits.
+Thus this coupled certificate, although formulated for the saturated law,
+only establishes regions in which saturation is inactive. Its small
+reference-increment allowance does not certify ordinary rapid coupled
+navigation. Failure of the inequalities outside this family does not prove
+physical instability.
 \end{remark}
 
+\subsubsection{Pure-Axis Tracking}
+\label{uhrc:sec:planar}
 
+Consider either exact pure-roll motion with
+$(\theta,\psi,q,r)=(0,0,0,0)$, or exact pure-pitch motion with
+$(\phi,\psi,p,r)=(0,0,0,0)$. Set the other two attitude references to zero
+and take $w=0$. Each such subspace is invariant for the ideal plant.
+Write $\vartheta$ for the selected angle and $\nu$ for its body rate.
+Then $\dot\vartheta=\nu$ and
+$J_a\dot\nu=\tau-d_a\nu$, with $J_a=0.0082$, $d_a=0.022$.
 
-\subsubsection{Translational Consequences and Convergence}
+Let $x=(e,\nu/37.2)^\top$, $e=r_k-\vartheta$, and
+$c=(11.3425,-0.49581(37.2))$.
+Using the scalar functions in \eqref{uhrc:eq:scalar-flow} at $h$, put
+\begin{equation}
+ F_h^a=\begin{bmatrix}1&-37.2f\\0&b\end{bmatrix},\qquad
+ G_h^a=\begin{bmatrix}-g_1\\g_2/37.2\end{bmatrix},\qquad
+ E_a=\begin{bmatrix}1\\0\end{bmatrix}.
+ \label{uhrc:eq:planar-maps}
+\end{equation}
+The exact sampled system is
+\begin{equation}
+ x_{k+1}=F_h^ax_k+G_h^a\operatorname{sat}_{[-0.6,0.6]}(cx_k)
+                              +E_a(r_{k+1}-r_k).
+ \label{uhrc:eq:planar-dynamics}
+\end{equation}
+For
+\begin{equation}
+ P_a=\begin{bmatrix}1&-0.8\\-0.8&1.7\end{bmatrix},
+ \qquad \det(P_a)=1.06,
+ \label{uhrc:eq:Pa}
+\end{equation}
+interval verification establishes
+\begin{equation}
+ (F_h^a+\lambda G_h^ac)^\top P_a(F_h^a+\lambda G_h^ac)
+ \prec0.855^2P_a,\qquad\lambda\in\{1/2,1\}.
+ \label{uhrc:eq:planar-certificate}
+\end{equation}
+The minimum verified pivot lower bound exceeds $0.0023027$.
+Convexity extends the norm inequality to every $\lambda\in[1/2,1]$.
+The accompanying bounds are
+\begin{align}
+ \sqrt{cP_a^{-1}c^\top}&<14.543,&
+ |e|&\le1.267\left\lVert x\right\rVert_{P_a},\nonumber\\
+ |\nu|&\le36.132\left\lVert x\right\rVert_{P_a},&
+ \|L_t^a\|_{P_a}&<1.022\quad(0\le t\le h).
+ \label{uhrc:eq:planar-bounds}
+\end{align}
+Here $L_t^a=F_t^a+\lambda G_t^ac$ for the multiplier selected at the tick.
+
+\begin{theorem}[Saturated tracking on an exact pure-axis invariant subspace]
+\label{uhrc:thm:planar}
+Assume either of the pure-axis initial-state and reference restrictions stated
+in Section~\ref{uhrc:sec:planar}, with zero external torque, fixed parameters and ideal held body torque. Suppose
+\[
+ |r_k|\le\pi/9,\qquad |r_{k+1}-r_k|\le0.01,\qquad
+ \left\lVert x_0\right\rVert_{P_a}\le0.08,
+\]
+where the increment is in radians per update. Then
+$\left\lVert x_k\right\rVert_{P_a}\le0.08$ at every sample,
+$\left\lVert x(t)\right\rVert_{P_a}<0.08176$ between samples, and
+$|\vartheta(t)|<25.94^\circ<30^\circ$ for all time.
+\end{theorem}
+\begin{proof}
+At a tick inside the ellipsoid,
+$|cx_k|<14.543(0.08)=1.16344<1.2$, so the regional sector applies.
+Since $\left\lVert E_a\right\rVert_{P_a}=1$,
+\[
+ \left\lVert x_{k+1}\right\rVert_{P_a}
+ \le0.855\left\lVert x_k\right\rVert_{P_a}+0.01
+ \le0.0784<0.08.
+\]
+Within the hold interval,
+$\left\lVert x(t)\right\rVert_{P_a}<1.022(0.08)=0.08176$.
+Thus
+\[
+ |\vartheta(t)|
+ \le\frac{\pi}{9}+1.267(1.022)(0.08)
+ <\frac{25.936\pi}{180}<\frac{\pi}{6}.
+\]
+Iteration also gives
+\[
+ \limsup_{k\to\infty}\left\lVert x_k\right\rVert_{P_a}
+ \le\frac{0.01}{1-0.855}\approx0.068966.
+\]
+\end{proof}
+
+\begin{remark}[Active saturation]
+The initial state
+\[
+ x_0=0.08\frac{P_a^{-1}c^\top}{\sqrt{cP_a^{-1}c^\top}}
+\]
+lies on the ellipsoid boundary and requests approximately $1.16339$ Nm,
+which is clipped to $0.6$ Nm. Active saturation is therefore included in
+Theorem~\ref{uhrc:thm:planar}. Its reference increment corresponds to
+$0.01/h=1$ rad/s, or approximately $57.2958^\circ$/s.
+This pure-axis result cannot be applied independently to simultaneous roll
+and pitch motion, which reintroduces the omitted coupling.
+\end{remark}
+
+\subsubsection{Scope of the UHRC Interconnection}
+\label{uhrc:sec:scope}
+
+Let the applied neural reference be
+$\eta_{r,k}=\operatorname{sat}(f_{\mathrm{raw}}(o_k,m_k))$, where $m_k$ denotes
+the stored neural memory and the yaw reference is set as specified above.
+Amplitude clipping bounds the requested angles for finite outputs. It does
+not establish actual-angle containment, the increment bound
+$\left\lVert \delta\eta_{r,k}\right\rVert_{2}\le R$, or the required initial tracking state.
+The theorems apply to UHRC only when the applied sequence is shown or
+enforced to satisfy the relevant admissible reference family. 
+The quantity $R/h$ is an increment-equivalent rate; a zero-order-held
+reference has jumps and does not need a bounded classical derivative.
+Similarly, bounded attitude tracking does not by itself establish bounded
+position error, navigation convergence, or obstacle avoidance.
+
+\begin{remark}[Numerical verification and implementation consistency]
+The matrix and remainder constants above belong to the fixed displayed
+configuration. Parameter changes require fresh verification of every
+dependent matrix inequality, residual bound, input budget, and physical
+containment condition. In particular, headroom must be evaluated as
+$\pi/6-\bar r$.
+\end{remark}
+
+\subsubsection{Velocity Bounds and Conditional Goal-Region Attractiveness}
 \label{sec:translation}
 
 \begin{proposition}[Velocity UUB]
 \label{prop:trans}
 
-Under Assumption 4,
+Assume additionally that $m>0$ and the horizontal dynamics satisfy
+\[
+ m\dot{\mathbf v}_I^{\mathrm h}=F_h-C_h\mathbf v_I^{\mathrm h},\qquad
+ \|F_h(t)\|_2\le T_{\max},\qquad
+ C_h=C_h^\top\succeq c_{\min}I_2,\quad c_{\min}>0.
+\]
+For example, the force bound follows from an actual thrust bound
+$0\le T(t)\le T_{\max}$ when no additional horizontal force is present.
+Then
 \[
  \|\mathbf v_I^{\mathrm h}(t)\|
  \le e^{-c_{\min}t/m}\|\mathbf v_I^{\mathrm h}(0)\|
@@ -1222,19 +1390,21 @@ The horizontal force satisfies $\|F_h\|\le T_{\max}$, giving
  D^+\|\mathbf v_I^{\mathrm h}\|
  \le T_{\max}/m-(c_{\min}/m)\|\mathbf v_I^{\mathrm h}\|.
 \]
-Scalar comparison yields the estimate. A constant nonzero horizontal
-force can produce a nonzero terminal velocity and hence unbounded
-position drift, providing a counterexample to a general position bound.
+Here $D^+$ is the upper right Dini derivative. Scalar comparison gives the
+estimate. A constant horizontal force can produce nonzero terminal velocity
+and unbounded position drift.
 \end{proof}
 
-\begin{theorem}[Goal-Region Attractiveness]
+\begin{theorem}[Conditional goal-region attractiveness]
 \label{thm:conv}
 Let $V_{\mathrm{nav}}=\tfrac12\|\mathbf r_I^{\mathrm h}
 -\mathbf r_{\mathrm{goal}}^{\mathrm h}\|^2$.
 For $r_0>0$, assume the goal region
 $\mathcal G=\{\|\mathbf r_I^{\mathrm h}
--\mathbf r_{\mathrm{goal}}^{\mathrm h}\|\le r_0\}$ is forward invariant.
-If there exists $\alpha_3\in\mathcal K$ such that
+-\mathbf r_{\mathrm{goal}}^{\mathrm h}\|\le r_0\}$ is forward invariant under the complete closed-loop dynamics, whose
+trajectories are assumed to exist for all subsequent times.
+If there exists a class-$\mathcal K$ function $\alpha_3$, continuous and
+strictly increasing with $\alpha_3(0)=0$, such that
 \begin{equation}
  \dot V_{\mathrm{nav}}
  =(\mathbf r_I^{\mathrm h}-\mathbf r_{\mathrm{goal}}^{\mathrm h})^\top
@@ -1253,10 +1423,8 @@ in finite time, a contradiction. Invariance ensures persistence.
 \end{proof}
 \begin{remark}
 Equation \eqref{eq:gdc} is a sufficient policy-dependent condition,
-not guaranteed by behavioural cloning. An obstacle detour may
-temporarily violate it. Attraction to a nonzero-radius goal region
-does not establish exact goal convergence, low-speed settling,
-or collision avoidance. 
+not established by the attitude certificate or guaranteed by behavioural cloning. An obstacle detour may
+temporarily violate it. 
 \end{remark}
 
 \section{Results}
@@ -1286,21 +1454,7 @@ Path feasibility is guaranteed when a collision-free grid path exists \parencite
 
 
 The planned waypoint sequence is converted into position setpoints at 10\,Hz by a pure pursuit tracker with fixed lookahead distance $L_d = 0.8$\,m \parencite{huang_path_2020}.
-
-
-The position setpoints are tracked through a cascaded PID structure.
-The outer position loop converts horizontal position errors into desired roll and pitch references $[\phi_d, \theta_d]$ using the standard small-angle coupling $\theta_d = a_x^{\mathrm{des}} / g$, $\phi_d = -a_y^{\mathrm{des}} / g$.
-The inner attitude loop uses derivative-filtered PID controllers on each axis to convert the attitude and altitude errors into body wrench commands \parencite{ren_efficient_2025,bouabdallah_design_2007}.
-
-
-\begin{table*}[ht]
-\centering
-\caption{Performance summary across all test cases ($N = 30$ trials).
-Metrics are averaged over all trials, including failures.
-Dashes indicate metrics that were not formally recorded in the original benchmark for that scenario.
-The success rate of the classical controller is 100\% for TC01--TC03 and TC05, based on all 30 trials reaching the goal without collision.}
-\label{tab:results_summary}
-\begin{tabular}{llccccc}
+\begin{tabular}{lcccccc}
 \hline
 Controller & Scenario & Success (\%) & RMSE (m) & IAE (m\,s) & ITAE (m\,s$^2$) & PLR \\
 \hline
@@ -1319,8 +1473,6 @@ Controller & Scenario & Success (\%) & RMSE (m) & IAE (m\,s) & ITAE (m\,s$^2$) &
  & TC05     & 33.3  & 5.696  & 124.82  & 1665.458  & 2.55 \\
 \hline
 \end{tabular}
-\end{table*}
-
 
 
 
